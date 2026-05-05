@@ -1,6 +1,14 @@
-# M31 H I holes — PPV flythrough viewer
+# M31 multi-tracer structures viewer
 
-Streamlit viewer for the 141 Brinks & Bajaja (1986) H I holes in M31, prepared for multi-tracer cavity layers.
+Streamlit viewer for M31 H I holes and contextual multi-tracer structures.
+
+Current populated layers:
+
+- H I: Brinks & Bajaja (1986) holes, refit with LGLBS/2DCG products.
+- UV: Kang et al. (2009) GALEX star-forming regions.
+- H-alpha: Azimlu et al. (2011) H II regions.
+
+Important terminology: only H I objects are called cavities/holes in this app. UV and H-alpha layers are contextual tracers of young stellar populations and ionized gas.
 
 ## Local run
 
@@ -8,16 +16,3 @@ Streamlit viewer for the 141 Brinks & Bajaja (1986) H I holes in M31, prepared f
 pip install -r requirements.txt
 streamlit run streamlit_app.py
 ```
-
-## Contents
-
-- `streamlit_app.py`: Streamlit app.
-- `data/holes_catalog_streamlit.csv`: catalogue used by the app.
-- `data/m31_background.png`: M31 H I background image.
-- `data/m31_background_meta.json`: background image extent metadata.
-- `videos/`: PPV flythrough MP4 videos.
-- `figures/contrast_joint_refit/`: contrast-joint-refit PNGs for selected holes.
-- `figures/2dcg_summary/`: 2D cumulative-growth summary PNGs for selected holes.
-- tracer filters in the app are ready for future CO, UV, Hα, IR and X-ray catalogues.
-
-This exported version uses relative paths only. It does not depend on `/johannes/...`, SSH tunnels, or a local video server.
