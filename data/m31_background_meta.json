@@ -1,0 +1,16 @@
+{
+  "x_min": -101.49390994429393,
+  "x_max": 85.71485410010011,
+  "y_min": -115.576343654716,
+  "y_max": 97.03401711729285,
+  "sizex": 187.20876404439406,
+  "sizey": 212.61036077200885,
+  "mom0_path": "/johannes/afcosmoj/khue/HolesHI/m31/m31_C+D+tp_hilores_strict_mom0.fits",
+  "native_nx": 3129,
+  "native_ny": 3640,
+  "png_path": "/johannes/afcosmoj/khue/HolesHI/streamlit_m31_holes/data/m31_background.png",
+  "downsample_step": 3,
+  "display_pmin": 1.0,
+  "display_pmax": 99.6,
+  "display_stretch": 0.08
+}
