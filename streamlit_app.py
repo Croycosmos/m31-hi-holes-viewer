@@ -18,6 +18,24 @@ OBJECTS_CATALOG_PATH = DATA_DIR / 'objects_catalog_streamlit.csv'
 NEW_CANDIDATES_CATALOG_PATH = DATA_DIR / 'new_hi_candidates_catalog_streamlit.csv'
 BACKGROUND_PNG = DATA_DIR / 'm31_background.png'
 BACKGROUND_META = DATA_DIR / 'm31_background_meta.json'
+CANDIDATE_SUMMARY_DIR = APP_DIR / 'figures' / 'candidate_summary_pdfs'
+CANDIDATE_SUMMARY_PDFS = [
+    {
+        'title': 'Nouveaux 72 candidats - distributions des paramètres',
+        'caption': 'Histogrammes globaux pour les 72 candidats H I retenus par le filtre v9.',
+        'filename': 'new_hi_candidates_v9_histograms_main.pdf',
+    },
+    {
+        'title': 'Potentiels 175 candidats - distributions des paramètres',
+        'caption': 'Histogrammes globaux pour les 175 candidats potentiels / rejetés par le filtre v9.',
+        'filename': 'v9_rejected_175_histograms_main.pdf',
+    },
+    {
+        'title': 'Potentiels 175 candidats - raisons de rejet',
+        'caption': 'Décompte des raisons de rejet du filtre v9, séparées par famille de critère.',
+        'filename': 'v9_rejected_reason_counts_split.pdf',
+    },
+]
 DISPLAY_FLIP_X = True
 
 ARCSEC_PER_PC = 206265.0 / 690000.0
@@ -148,6 +166,50 @@ def image_file_to_data_uri(path: Path) -> str:
     data = path.read_bytes()
     b64 = base64.b64encode(data).decode('utf-8')
     return f'data:{mime};base64,{b64}'
+
+
+@st.cache_data(show_spinner=False)
+def file_to_base64(path: Path) -> str:
+    return base64.b64encode(path.read_bytes()).decode('utf-8')
+
+
+def render_pdf_inline(path: Path, height: int = 700) -> None:
+    if not path.exists():
+        st.info(f'PDF not found: `{path.relative_to(APP_DIR) if path.is_relative_to(APP_DIR) else path}`')
+        return
+    b64 = file_to_base64(path)
+    html = f"""
+    <iframe
+        src="data:application/pdf;base64,{b64}#toolbar=1&navpanes=0&scrollbar=1"
+        width="100%"
+        height="{int(height)}"
+        style="border: 1px solid #ddd; border-radius: 6px; background: white;"
+    ></iframe>
+    """
+    components.html(html, height=int(height) + 20, scrolling=False)
+
+
+def render_candidate_summary_pdfs() -> None:
+    st.markdown('### Candidate summary documents')
+    st.caption('Global diagnostic PDF panels for the v9 new-candidate catalogues.')
+    for i, item in enumerate(CANDIDATE_SUMMARY_PDFS):
+        path = CANDIDATE_SUMMARY_DIR / item['filename']
+        with st.expander(item['title'], expanded=(i == 0)):
+            st.caption(item['caption'])
+            if path.exists():
+                size_mb = path.stat().st_size / 1024**2
+                st.write(f'File: `{path.relative_to(APP_DIR)}` - `{size_mb:.1f} MB`')
+                with path.open('rb') as fh:
+                    st.download_button(
+                        'Download PDF',
+                        data=fh.read(),
+                        file_name=path.name,
+                        mime='application/pdf',
+                        key=f'download_summary_pdf_{i}',
+                    )
+                render_pdf_inline(path, height=680)
+            else:
+                st.info(f'PDF not found: `{path.relative_to(APP_DIR)}`')
 
 
 def transform_background_extent(meta: dict) -> dict:
@@ -668,6 +730,9 @@ with right:
     st.write(f'BB86 H I videos found: `{n_video}/{n_hi}`')
     st.write(f'Koch25 new H I candidates: `{n_clean}`')
     st.write(f'Potential new H I candidates: `{n_rej}`')
+
+    with st.expander('Global candidate summary PDFs', expanded=False):
+        render_candidate_summary_pdfs()
 
     source_options = ['H I BB86', 'Koch25 new HI candidate', 'Potential new HI Candidate']
     current_source = st.session_state.get('selected_source_type', 'H I BB86')
