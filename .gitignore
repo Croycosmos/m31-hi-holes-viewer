@@ -1,2 +1,6 @@
 __pycache__/
 *.pyc
+
+# Do not commit generated movies
+videos/**/*.mp4
+*.mp4
