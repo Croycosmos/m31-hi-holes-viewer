@@ -98,6 +98,8 @@ def load_hi_catalog(path: Path) -> pd.DataFrame:
         df['has_video'] = df['has_video'].map(as_bool)
     else:
         df['has_video'] = df.get('video_path', '').astype(str).str.len() > 0
+    if 'video_url' in df.columns:
+        df['has_video'] = df['has_video'] | df['video_url'].fillna('').astype(str).str.strip().str.len().gt(0)
     if 'tracer' not in df.columns:
         df['tracer'] = 'HI'
     if 'source_catalog' not in df.columns:
@@ -237,6 +239,13 @@ def resolve_video_path(row: pd.Series) -> Path | None:
     if path.is_absolute():
         path = Path('videos') / path.name
     return APP_DIR / path
+
+
+def resolve_video_url(row: pd.Series) -> str:
+    raw = str(row.get('video_url', '')).strip()
+    if not raw or raw.lower() in {'nan', 'none'}:
+        return ''
+    return raw
 
 
 def resolve_optional_path(row: pd.Series, column: str) -> Path | None:
@@ -427,6 +436,23 @@ def video_player_from_file(path: Path, height: int = 520) -> None:
     """
     components.html(html, height=height)
     st.download_button(label='Download MP4', data=video_bytes, file_name=path.name, mime='video/mp4', width='stretch')
+
+
+def video_player_from_url(url: str, height: int = 520) -> None:
+    url = str(url).strip()
+    if not url:
+        st.error('Empty video URL.')
+        return
+    html = f"""
+    <video width="100%" controls preload="metadata" style="background-color: black;">
+        <source src="{url}" type="video/mp4">
+        Your browser cannot play this MP4 video.
+    </video>
+    <p style="font-size: 0.85rem;">
+        <a href="{url}" target="_blank" rel="noopener noreferrer">Open / download MP4</a>
+    </p>
+    """
+    components.html(html, height=height)
 
 
 def build_m31_figure(
@@ -871,8 +897,17 @@ with right:
                 st.dataframe(build_external_object_table(obj_row), width='stretch', hide_index=True)
 
         st.markdown('### PPV video')
+        video_url = resolve_video_url(selected_hi_row)
         video_path = resolve_video_path(selected_hi_row)
-        if video_path is None:
+
+        if video_url:
+            st.code(video_url, language='text')
+            st.success('Video served from GitHub Release asset.')
+            try:
+                video_player_from_url(video_url)
+            except Exception as exc:
+                st.error(f'Video URL playback error: {exc}')
+        elif video_path is None:
             st.warning('No video associated with this H I hole.')
         else:
             try:
@@ -882,7 +917,7 @@ with right:
             st.code(display_path, language='text')
             if video_path.exists():
                 size_mb = video_path.stat().st_size / 1024**2
-                st.success(f'Video file found. Size: {size_mb:.1f} MB')
+                st.success(f'Local video file found. Size: {size_mb:.1f} MB')
                 try:
                     video_player_from_file(video_path)
                 except Exception as exc:
