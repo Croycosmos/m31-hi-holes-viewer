@@ -35,6 +35,16 @@ CANDIDATE_SUMMARY_PDFS = [
         'caption': 'Décompte des raisons de rejet du filtre v9, séparées par famille de critère.',
         'filename': 'v9_rejected_reason_counts_split.pdf',
     },
+    {
+        'title': 'BB86 table.fits vs géométrie 2DCG/joint',
+        'caption': 'Comparaison globale entre les paramètres BB86 originaux et la géométrie utilisée après CumulativeGrowth2D / joint refit.',
+        'filename': 'bb86_table_vs_2dcg_refit_histograms.pdf',
+    },
+    {
+        'title': 'BB86 - distributions avec géométrie CumulativeGrowth2D',
+        'caption': 'Distributions globales des 141 trous BB86 avec les tailles 2DCG et les paramètres utilisés dans le viewer.',
+        'filename': 'bb86_2dcg_joint_histograms_main.pdf',
+    },
 ]
 DISPLAY_FLIP_X = True
 
@@ -61,6 +71,8 @@ TRACER_SYMBOLS = {
     'CO': 'diamond',
     'IR': 'hexagon',
     'X-ray': 'star',
+    'Koch25 new HI candidate': 'circle-open',
+    'Potential new HI Candidate': 'circle',
 }
 
 st.set_page_config(page_title='M31 multi-tracer structures viewer', layout='wide')
@@ -704,7 +716,7 @@ def resolve_catalog_path(row: pd.Series, column: str) -> Path | None:
 
 def build_candidate_table(row: pd.Series) -> pd.DataFrame:
     cols = [
-        ('catalog status', 'tracer'), ('candidate ID', 'candidate_id'), ('source catalog', 'source_catalog'),
+        ('candidate ID', 'candidate_id'), ('source catalog', 'source_catalog'),
         ('RA [deg]', 'ra_deg'), ('Dec [deg]', 'dec_deg'), ('X [arcmin]', 'x_arcmin'), ('Y [arcmin]', 'y_arcmin'),
         ('v center [km/s]', 'v_center_kms'), ('Maj [pc]', 'Maj_pc'), ('Min [pc]', 'Min_pc'), ('PA [deg]', 'PA_astro_deg'),
         ('major [arcsec]', 'major_arcsec'), ('minor [arcsec]', 'minor_arcsec'), ('v9 score', 'v9_final_score'),
@@ -852,7 +864,7 @@ with left:
         if png_path is not None and png_path.exists():
             st.image(str(png_path), width='stretch')
         else:
-            st.warning('No validation PNG found for this candidate.')
+            pass  # hidden by local patch
 
 with right:
     if selected_source_type == 'H I BB86' and selected_hi_row is not None:
@@ -896,6 +908,30 @@ with right:
                 st.markdown('### Last clicked map object')
                 st.dataframe(build_external_object_table(obj_row), width='stretch', hide_index=True)
 
+                st.markdown("### Clicked object PPV video")
+                video_url_for_clicked = ""
+                for _video_col in ["video_url", "video_release_url", "video_path"]:
+                    if _video_col in obj_row.index:
+                        _raw_video = str(obj_row.get(_video_col, "")).strip()
+                        if _raw_video and _raw_video.lower() not in {"nan", "none"}:
+                            video_url_for_clicked = _raw_video
+                            break
+                if video_url_for_clicked.startswith("http://") or video_url_for_clicked.startswith("https://"):
+                    st.caption("Video served from GitHub Release asset.")
+                    st.video(video_url_for_clicked)
+                elif video_url_for_clicked:
+                    _local_video = Path(video_url_for_clicked)
+                    if _local_video.is_absolute():
+                        _local_video = Path("videos") / _local_video.name
+                    _local_video = APP_DIR / _local_video
+                    if _local_video.exists():
+                        st.caption("Video served from local file.")
+                        st.video(str(_local_video))
+                    else:
+                        pass
+                else:
+                    pass
+
         st.markdown('### PPV video')
         video_url = resolve_video_url(selected_hi_row)
         video_path = resolve_video_path(selected_hi_row)
@@ -934,6 +970,38 @@ with right:
         ])
         st.dataframe(pd.concat([cand_meta, extra], ignore_index=True), width='stretch', hide_index=True)
 
+        st.markdown('### Selected candidate PPV video')
+        candidate_video_url = ''
+        for video_col in ['video_url', 'video_release_url', 'video_path']:
+            if video_col in selected_candidate_row.index:
+                raw = str(selected_candidate_row.get(video_col, '')).strip()
+                if raw and raw.lower() not in {'nan', 'none'}:
+                    candidate_video_url = raw
+                    break
+
+        if candidate_video_url.startswith('http://') or candidate_video_url.startswith('https://'):
+            st.code(candidate_video_url, language='text')
+            st.success('Video served from GitHub Release asset.')
+            try:
+                video_player_from_url(candidate_video_url)
+            except Exception as exc:
+                st.error(f'Candidate video URL playback error: {exc}')
+        elif candidate_video_url:
+            candidate_video_path = Path(candidate_video_url)
+            if candidate_video_path.is_absolute():
+                candidate_video_path = Path('videos') / candidate_video_path.name
+            candidate_video_path = APP_DIR / candidate_video_path
+            if candidate_video_path.exists():
+                st.success('Video served from local file.')
+                try:
+                    video_player_from_file(candidate_video_path)
+                except Exception as exc:
+                    st.error(f'Candidate video playback error: {exc}')
+            else:
+                st.error(f'Candidate video path is set but file is missing: {candidate_video_path}')
+        else:
+            st.warning('No video associated with this selected candidate.')
+
         st.markdown('### Multi-tracer context around selected H I candidate')
         context_summary, near_table = nearest_context_tables(selected_candidate_row, objects_df, max_radius_factor=3.0)
         if context_summary.empty:
@@ -957,11 +1025,6 @@ with right:
                     config={'responsive': True}, width='stretch',
                 )
 
-        st.info('For these new-candidate objects the BB86 2DCG + joint-contrast refit table is intentionally hidden. The diagnostic PNG above is the relevant validation product for now.')
+        pass  # hidden by local patch
 
-    st.markdown('### Catalogue status')
-    st.write(f'H I holes: `{len(hi_df)}`')
-    st.write(f'All map objects: `{len(objects_df)}`')
-    st.write(f'Objects visible on map: `{len(df_map)}`')
-    st.write(f'H I videos found: `{n_video}`')
-    st.write(f'H I videos missing: `{n_hi - n_video}`')
+    pass  # hidden by local patch
