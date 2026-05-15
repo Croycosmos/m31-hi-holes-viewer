@@ -691,11 +691,11 @@ def load_new_candidates_catalog(path: Path) -> pd.DataFrame:
     df = pd.read_csv(path)
     if df.empty:
         return df
-    for col in ['object_uid', 'tracer', 'source_catalog', 'display_label', 'validation_png']:
+    for col in ['object_uid', 'tracer', 'source_catalog', 'display_label', 'validation_png', 'video_url', 'video_release_url', 'video_path', 'video_name', 'video_release_tag']:
         if col not in df.columns:
             df[col] = ''
         df[col] = df[col].fillna('').astype(str)
-    for col in ['candidate_id', 'ra_deg', 'dec_deg', 'x_arcmin', 'y_arcmin', 'major_arcsec', 'minor_arcsec', 'pa_deg', 'v_center_kms', 'Maj_pc', 'Min_pc', 'PA_astro_deg', 'v9_final_score']:
+    for col in ['candidate_id', 'new_candidate_id', 'ra_deg', 'dec_deg', 'x_arcmin', 'y_arcmin', 'major_arcsec', 'minor_arcsec', 'pa_deg', 'v_center_kms', 'Maj_pc', 'Min_pc', 'PA_astro_deg', 'v9_final_score']:
         if col not in df.columns:
             df[col] = np.nan
         df[col] = pd.to_numeric(df[col], errors='coerce')
@@ -970,8 +970,13 @@ with right:
         ])
         st.dataframe(pd.concat([cand_meta, extra], ignore_index=True), width='stretch', hide_index=True)
 
+
         st.markdown('### Selected candidate PPV video')
+
         candidate_video_url = ''
+        candidate_label = str(selected_candidate_row.get('display_label', 'selected candidate'))
+
+        # A. URL directe depuis new_hi_candidates_catalog_streamlit.csv.
         for video_col in ['video_url', 'video_release_url', 'video_path']:
             if video_col in selected_candidate_row.index:
                 raw = str(selected_candidate_row.get(video_col, '')).strip()
@@ -979,6 +984,41 @@ with right:
                     candidate_video_url = raw
                     break
 
+        # B. Fallback depuis objects_df via object_uid.
+        if not candidate_video_url and 'object_uid' in selected_candidate_row.index and 'object_uid' in objects_df.columns:
+            uid = str(selected_candidate_row.get('object_uid', '')).strip()
+            sub_obj = objects_df.loc[objects_df['object_uid'].astype(str).eq(uid)].copy()
+            if not sub_obj.empty:
+                obj_video_row = sub_obj.iloc[0]
+                for video_col in ['video_url', 'video_release_url', 'video_path']:
+                    if video_col in obj_video_row.index:
+                        raw = str(obj_video_row.get(video_col, '')).strip()
+                        if raw and raw.lower() not in {'nan', 'none'}:
+                            candidate_video_url = raw
+                            break
+
+        # C. Fallback final : reconstruire l'URL depuis l'ID.
+        if not candidate_video_url:
+            cand_id = None
+            for id_col in ['new_candidate_id', 'candidate_id']:
+                if id_col in selected_candidate_row.index:
+                    try:
+                        cand_id = int(float(selected_candidate_row.get(id_col)))
+                        break
+                    except Exception:
+                        pass
+
+            if cand_id is not None:
+                repo = 'Croycosmos/m31-hi-holes-viewer'
+                tag = 'ppv-new-candidates-v1'
+                tracer_txt = str(selected_candidate_row.get('tracer', selected_source_type)).lower()
+                if 'potential' in tracer_txt:
+                    fname = f'potential_candidate_{cand_id:04d}_ppv_flythrough_dark_web.mp4'
+                else:
+                    fname = f'new_candidate_{cand_id:04d}_ppv_flythrough_dark_web.mp4'
+                candidate_video_url = f'https://github.com/{repo}/releases/download/{tag}/{fname}'
+
+        # D. Affichage.
         if candidate_video_url.startswith('http://') or candidate_video_url.startswith('https://'):
             st.code(candidate_video_url, language='text')
             st.success('Video served from GitHub Release asset.')
@@ -1001,6 +1041,7 @@ with right:
                 st.error(f'Candidate video path is set but file is missing: {candidate_video_path}')
         else:
             st.warning('No video associated with this selected candidate.')
+
 
         st.markdown('### Multi-tracer context around selected H I candidate')
         context_summary, near_table = nearest_context_tables(selected_candidate_row, objects_df, max_radius_factor=3.0)
