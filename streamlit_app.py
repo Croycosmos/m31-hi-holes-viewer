@@ -36,47 +36,47 @@ CANDIDATE_SUMMARY_PDFS = [
         'filename': 'candidates_247_histograms_main.pdf',
     },
     {
-        'title': 'Nouveaux 72 candidats - distributions des paramètres',
-        'caption': 'Histogrammes globaux pour les 72 candidats H I retenus par le filtre v9.',
+        'title': '72 candidats retenus — distributions des paramètres',
+        'caption': 'Histogrammes globaux pour les 72 candidats H I retenus.',
         'filename': 'new_hi_candidates_v9_histograms_main.pdf',
     },
     {
-        'title': 'Potentiels 175 candidats - distributions des paramètres',
+        'title': '175 candidats potentiels — distributions des paramètres',
         'caption': 'Histogrammes globaux pour les 175 candidats potentiels du filtre v9.',
-        'filename': 'v9_rejected_175_histograms_main.pdf',
+        'filename': 'v9_potential_175_histograms_main.pdf',
     },
     {
         'title': 'Potentiels 175 candidats - critères du statut potentiel',
         'caption': 'Décompte des critères ayant conduit au statut potentiel dans le filtre v9.',
-        'filename': 'v9_rejected_reason_counts_split.pdf',
+        'filename': 'v9_potential_reason_counts_split.pdf',
     },
 ]
 
 V11_POPULATION_DIR = APP_DIR / 'figures' / 'intermediate' / 'RefineV9Candidates2DCG_v11_merged_population'
 V11_POPULATION_DIAGNOSTIC_IMAGES = [
     {
-        'title': 'v11 population 247 - counts',
+        'title': '2DCG refit population - counts',
         'caption': 'Comptages globaux des classes et statuts v11 pour les 247 candidats.',
         'filename': 'v11_population_merged247_counts.png',
     },
     {
-        'title': 'v11 population 247 - histograms',
+        'title': '2DCG refit population - histograms',
         'caption': 'Histogrammes globaux de la population v11 des 247 candidats.',
         'filename': 'v11_population_merged247_histograms.png',
     },
     {
-        'title': 'v11 population 247 - geometry scatter',
+        'title': '2DCG refit population - geometry scatter',
         'caption': 'Plans de dispersion géométriques pour les paramètres v11.',
         'filename': 'v11_population_merged247_geometry_scatter.png',
     },
     {
-        'title': 'v11 population 247 - core/control scatter',
+        'title': '2DCG refit population - core/control scatter',
         'caption': 'Comparaison core/control pour les scores et déficits v11.',
         'filename': 'v11_population_merged247_core_control_scatter.png',
     },
     {
-        'title': 'v11 population 247 - trial velocity scores',
-        'caption': 'Scores v11 selon les essais en vitesse.',
+        'title': '2DCG refit population - trial velocity scores',
+        'caption': 'Scores selon les essais en vitesse.',
         'filename': 'v11_population_merged247_trial_velocity_scores.png',
     },
 ]
@@ -241,15 +241,15 @@ def render_pdf_inline(path: Path, height: int = 700) -> None:
 
 
 def render_v11_population_diagnostics() -> None:
-    st.markdown('### v11 population diagnostics')
-    st.caption('Global v11 diagnostic figures for the 247-candidate population.')
+    st.markdown('### 2DCG refit population diagnostics')
+    st.caption('Global diagnostic figures for the 247-candidate population.')
     for i, item in enumerate(V11_POPULATION_DIAGNOSTIC_IMAGES):
         path = V11_POPULATION_DIR / item['filename']
         with st.expander(item['title'], expanded=False):
             st.caption(item['caption'])
             if path.exists():
                 size_mb = path.stat().st_size / 1024**2
-                st.write(f'File: `{path.relative_to(APP_DIR)}` - `{size_mb:.1f} MB`')
+                st.write(f'File available — `{size_mb:.1f} MB`')
                 st.image(str(path), width='stretch')
                 with path.open('rb') as fh:
                     st.download_button(
@@ -272,7 +272,7 @@ def render_candidate_summary_pdfs() -> None:
             st.caption(item['caption'])
             if path.exists():
                 size_mb = path.stat().st_size / 1024**2
-                st.write(f'File: `{path.relative_to(APP_DIR)}` - `{size_mb:.1f} MB`')
+                st.write(f'File available — `{size_mb:.1f} MB`')
                 with path.open('rb') as fh:
                     st.download_button(
                         'Download PDF',
@@ -779,7 +779,7 @@ def build_candidate_table(row: pd.Series) -> pd.DataFrame:
         ('candidate ID', 'candidate_id'), ('source catalog', 'source_catalog'),
         ('RA [deg]', 'ra_deg'), ('Dec [deg]', 'dec_deg'), ('X [arcmin]', 'x_arcmin'), ('Y [arcmin]', 'y_arcmin'),
         ('v center [km/s]', 'v_center_kms'), ('Maj [pc]', 'Maj_pc'), ('Min [pc]', 'Min_pc'), ('PA [deg]', 'PA_astro_deg'),
-        ('major [arcsec]', 'major_arcsec'), ('minor [arcsec]', 'minor_arcsec'), ('v9 score', 'v9_final_score'),
+        ('major [arcsec]', 'major_arcsec'), ('minor [arcsec]', 'minor_arcsec'), ('validation score', 'v9_final_score'),
         ('potential-status criterion', 'v9_reject_reason'), ('notes', 'notes'),
     ]
     rows = []
@@ -806,7 +806,7 @@ def render_stat_figure_card(title: str, caption: str, png_rel: str | None = None
 
     if png_path is not None and png_path.exists():
         st.image(str(png_path), width='stretch')
-        st.caption(f'PNG: `{png_path.relative_to(APP_DIR)}`')
+        st.caption('PNG available for this figure.')
     elif png_rel:
         st.warning(f'Missing PNG: `{png_rel}`')
 
@@ -842,14 +842,14 @@ def render_global_statistics() -> None:
     groups = {
         'BB86': [
             {
-                'title': 'BB86 — 2DCG + joint refit',
-                'caption': 'Distributions des paramètres BB86 mesurés avec le refit 2DCG / joint.',
+                'title': 'BB86 — 2DCG refit',
+                'caption': 'Distributions des paramètres BB86 mesurés avec le refit 2DCG.',
                 'png': 'figures/final/bb86_2dcg_histograms/bb86_2dcg_joint_histograms_main.png',
                 'pdf': 'figures/final/bb86_2dcg_histograms/bb86_2dcg_joint_histograms_main.pdf',
                 'csv': 'figures/final/bb86_2dcg_histograms/bb86_2dcg_joint_histogram_summary_stats.csv',
             },
             {
-                'title': 'BB86 — table originale vs refit 2DCG',
+                'title': 'BB86 — catalogue original vs refit 2DCG',
                 'caption': 'Comparaison entre les paramètres de table et les paramètres refittés.',
                 'png': 'figures/final/bb86_2dcg_histograms/bb86_table_vs_2dcg_refit_histograms.png',
                 'pdf': 'figures/final/bb86_2dcg_histograms/bb86_table_vs_2dcg_refit_histograms.pdf',
@@ -858,14 +858,14 @@ def render_global_statistics() -> None:
         ],
         '72 retenus': [
             {
-                'title': '72 candidats retenus — histogrammes principaux',
-                'caption': 'Distributions principales des candidats v9 retenus.',
+                'title': '72 candidats retenus — histogrammes',
+                'caption': 'Distributions principales des candidats retenus.',
                 'png': 'figures/final/new_candidates_v9_histograms/new_hi_candidates_v9_histograms_main.png',
                 'pdf': 'figures/final/new_candidates_v9_histograms/new_hi_candidates_v9_histograms_main.pdf',
                 'csv': 'figures/final/new_candidates_v9_histograms/new_hi_candidates_2dcg_v9_histogram_summary_stats.csv',
             },
             {
-                'title': '72 candidats retenus — par classe de qualité',
+                'title': '72 candidats retenus — classes de qualité',
                 'caption': 'Distributions séparées par classe de qualité.',
                 'png': 'figures/final/new_candidates_v9_histograms/new_hi_candidates_v9_histograms_by_quality_class.png',
                 'pdf': 'figures/final/new_candidates_v9_histograms/new_hi_candidates_v9_histograms_by_quality_class.pdf',
@@ -874,63 +874,63 @@ def render_global_statistics() -> None:
         ],
         '175 potentiels': [
             {
-                'title': '175 candidats potentiels — histogrammes principaux',
+                'title': '175 candidats potentiels — histogrammes',
                 'caption': 'Distributions des 175 candidats potentiels.',
-                'png': 'figures/final/potential_candidates_v9_histograms/v9_rejected_175_histograms_main.png',
-                'pdf': 'figures/final/potential_candidates_v9_histograms/v9_rejected_175_histograms_main.pdf',
-                'csv': 'figures/final/potential_candidates_v9_histograms/v9_rejected_175_summary_stats.csv',
+                'png': 'figures/final/potential_candidates_v9_histograms/v9_potential_175_histograms_main.png',
+                'pdf': 'figures/final/potential_candidates_v9_histograms/v9_potential_175_histograms_main.pdf',
+                'csv': 'figures/final/potential_candidates_v9_histograms/v9_potential_175_summary_stats.csv',
             },
             {
-                'title': '175 candidats potentiels — raisons de classement',
+                'title': '175 candidats potentiels — critères de classement',
                 'caption': 'Décompte des critères qui déplacent ces objets dans la classe potentielle.',
-                'png': 'figures/final/potential_candidates_v9_histograms/v9_rejected_reason_counts_split.png',
-                'pdf': 'figures/final/potential_candidates_v9_histograms/v9_rejected_reason_counts_split.pdf',
-                'csv': 'figures/final/potential_candidates_v9_histograms/v9_rejected_reason_counts_split.csv',
+                'png': 'figures/final/potential_candidates_v9_histograms/v9_potential_reason_counts_split.png',
+                'pdf': 'figures/final/potential_candidates_v9_histograms/v9_potential_reason_counts_split.pdf',
+                'csv': 'figures/final/potential_candidates_v9_histograms/v9_potential_reason_counts_split.csv',
             },
             {
-                'title': '175 candidats potentiels — top critères',
+                'title': '175 candidats potentiels — critères dominants',
                 'caption': 'Critères dominants dans la population potentielle.',
-                'png': 'figures/final/potential_candidates_v9_histograms/v9_rejected_reason_counts_combined_top20.png',
-                'pdf': 'figures/final/potential_candidates_v9_histograms/v9_rejected_reason_counts_combined_top20.pdf',
-                'csv': 'figures/final/potential_candidates_v9_histograms/v9_rejected_reason_counts_combined.csv',
+                'png': 'figures/final/potential_candidates_v9_histograms/v9_potential_reason_counts_combined_top20.png',
+                'pdf': 'figures/final/potential_candidates_v9_histograms/v9_potential_reason_counts_combined_top20.pdf',
+                'csv': 'figures/final/potential_candidates_v9_histograms/v9_potential_reason_counts_combined.csv',
             },
         ],
         '247 total': [
             {
-                'title': '247 candidats — 72 retenus vs 175 potentiels',
+                'title': '247 candidats — retenus vs potentiels',
                 'caption': 'Comparaison des distributions entre les deux sous-populations.',
-                'png': 'figures/final/potential_candidates_v9_histograms/v9_kept72_vs_rejected175_histograms.png',
-                'pdf': 'figures/final/potential_candidates_v9_histograms/v9_kept72_vs_rejected175_histograms.pdf',
+                'png': 'figures/final/potential_candidates_v9_histograms/v9_kept72_vs_potential175_histograms.png',
+                'pdf': 'figures/final/potential_candidates_v9_histograms/v9_kept72_vs_potential175_histograms.pdf',
                 'csv': 'figures/final/potential_candidates_v9_histograms/v9_all_247_summary_stats.csv',
             },
         ],
-        'v11 population': [
+        '2DCG refit population': [
             {
-                'title': 'v11 population 247 — counts',
-                'caption': 'Comptages globaux des classes et statuts v11.',
+                'title': '2DCG refit population — counts',
+                'caption': 'Comptages globaux des classes et statuts.',
                 'png': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_counts.png',
                 'csv': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv',
             },
             {
-                'title': 'v11 population 247 — histogrammes',
-                'caption': 'Histogrammes v11 de la population complète.',
+                'title': '2DCG refit population — histogrammes',
+                'caption': 'Histogrammes de la population complète.',
                 'png': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_histograms.png',
                 'csv': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv',
             },
             {
-                'title': 'v11 population 247 — géométrie',
-                'caption': 'Plans géométriques v11.',
+                'title': '2DCG refit population — géométrie',
+                'caption': 'Plans géométriques.',
                 'png': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_geometry_scatter.png',
                 'csv': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv',
             },
             {
-                'title': 'v11 population 247 — core/control',
+                'title': '2DCG refit population — core/control',
                 'caption': 'Comparaison core/control des scores et déficits.',
                 'png': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_core_control_scatter.png',
                 'csv': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv',
             },
             {
-                'title': 'v11 population 247 — vitesses testées',
+                'title': '2DCG refit population — vitesses testées',
                 'caption': 'Scores selon les essais en vitesse.',
                 'png': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_trial_velocity_scores.png',
                 'csv': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv',
@@ -1013,7 +1013,7 @@ def render_multitracer_panel(selected_source_type: str, selected_hi_row, selecte
 
     if png_path.exists():
         st.image(str(png_path), width='stretch')
-        st.caption(f'Image: `{png_path.relative_to(APP_DIR)}`')
+        st.caption('Multi-tracer PNG available for this object.')
     else:
         st.warning(f'No multi-tracer PNG found for this selected object: `{png_path.relative_to(APP_DIR)}`')
 
@@ -1039,7 +1039,7 @@ def render_multitracer_panel(selected_source_type: str, selected_hi_row, selecte
 
 st.title('M31 multi-tracer structures viewer')
 st.caption(
-    'H I objects are cavities/holes. Koch25 new H I candidates and potential candidates come from the blind 2DCG/v9 pipeline. UV, Hα and Dust-HELGA layers remain contextual tracers.'
+    'H I objects are cavities/holes. Koch25 new H I candidates and potential candidates come from the blind 2DCG pipeline. UV, Hα and Dust-HELGA layers remain contextual tracers.'
 )
 
 if not HI_CATALOG_PATH.exists():
@@ -1169,18 +1169,18 @@ with tab_detection:
             render_optional_png(selected_hi_row, 'contrast_joint_refit', 'contrast_joint_refit_png', 'No contrast_joint_refit PNG found for this H I hole.')
             render_optional_png(selected_hi_row, '2DCG summary', 'summary_2dcg_png', 'No 2DCG summary PNG found for this H I hole.')
         elif selected_candidate_row is not None:
-            st.markdown('### 2DCG/v9 validation PNG')
+            st.markdown('### Initial 2DCG validation diagnostic')
             png_path = resolve_catalog_path(selected_candidate_row, 'validation_png')
             if png_path is not None and png_path.exists():
                 st.image(str(png_path), width='stretch')
             else:
                 pass  # hidden by local patch
-            st.markdown('### 2DCG/v11 diagnostic PNG')
+            st.markdown('### 2DCG refit diagnostic')
             v11_png_path = resolve_catalog_path(selected_candidate_row, 'v11_diagnostic_png')
             if v11_png_path is not None and v11_png_path.exists():
                 st.image(str(v11_png_path), width='stretch')
             else:
-                st.caption('No v11 diagnostic PNG available for this selected candidate.')
+                st.caption('No 2DCG refit diagnostic PNG available for this selected candidate.')
 
     with right:
         if selected_source_type == 'H I BB86' and selected_hi_row is not None:
