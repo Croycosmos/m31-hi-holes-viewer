@@ -51,6 +51,35 @@ CANDIDATE_SUMMARY_PDFS = [
         'filename': 'v9_rejected_reason_counts_split.pdf',
     },
 ]
+
+V11_POPULATION_DIR = APP_DIR / 'figures' / 'intermediate' / 'RefineV9Candidates2DCG_v11_merged_population'
+V11_POPULATION_DIAGNOSTIC_IMAGES = [
+    {
+        'title': 'v11 population 247 - counts',
+        'caption': 'Comptages globaux des classes et statuts v11 pour les 247 candidats.',
+        'filename': 'v11_population_merged247_counts.png',
+    },
+    {
+        'title': 'v11 population 247 - histograms',
+        'caption': 'Histogrammes globaux de la population v11 des 247 candidats.',
+        'filename': 'v11_population_merged247_histograms.png',
+    },
+    {
+        'title': 'v11 population 247 - geometry scatter',
+        'caption': 'Plans de dispersion géométriques pour les paramètres v11.',
+        'filename': 'v11_population_merged247_geometry_scatter.png',
+    },
+    {
+        'title': 'v11 population 247 - core/control scatter',
+        'caption': 'Comparaison core/control pour les scores et déficits v11.',
+        'filename': 'v11_population_merged247_core_control_scatter.png',
+    },
+    {
+        'title': 'v11 population 247 - trial velocity scores',
+        'caption': 'Scores v11 selon les essais en vitesse.',
+        'filename': 'v11_population_merged247_trial_velocity_scores.png',
+    },
+]
 DISPLAY_FLIP_X = True
 
 ARCSEC_PER_PC = 206265.0 / 690000.0
@@ -208,6 +237,30 @@ def render_pdf_inline(path: Path, height: int = 700) -> None:
     ></iframe>
     """
     components.html(html, height=int(height) + 20, scrolling=False)
+
+
+
+def render_v11_population_diagnostics() -> None:
+    st.markdown('### v11 population diagnostics')
+    st.caption('Global v11 diagnostic figures for the 247-candidate population.')
+    for i, item in enumerate(V11_POPULATION_DIAGNOSTIC_IMAGES):
+        path = V11_POPULATION_DIR / item['filename']
+        with st.expander(item['title'], expanded=False):
+            st.caption(item['caption'])
+            if path.exists():
+                size_mb = path.stat().st_size / 1024**2
+                st.write(f'File: `{path.relative_to(APP_DIR)}` - `{size_mb:.1f} MB`')
+                st.image(str(path), width='stretch')
+                with path.open('rb') as fh:
+                    st.download_button(
+                        'Download PNG',
+                        data=fh.read(),
+                        file_name=path.name,
+                        mime='image/png',
+                        key=f'v11_population_{i}_{path.name}',
+                    )
+            else:
+                st.warning(f'Missing file: `{path.relative_to(APP_DIR)}`')
 
 
 def render_candidate_summary_pdfs() -> None:
@@ -698,11 +751,11 @@ def load_new_candidates_catalog(path: Path) -> pd.DataFrame:
     df = pd.read_csv(path)
     if df.empty:
         return df
-    for col in ['object_uid', 'tracer', 'source_catalog', 'display_label', 'validation_png', 'video_url', 'video_release_url', 'video_path', 'video_name', 'video_release_tag']:
+    for col in ['object_uid', 'tracer', 'source_catalog', 'display_label', 'validation_png', 'video_url', 'video_release_url', 'video_path', 'video_name', 'video_release_tag', 'v11_diagnostic_png', 'v11_plot_class', 'v11_passes_2dcg']:
         if col not in df.columns:
             df[col] = ''
         df[col] = df[col].fillna('').astype(str)
-    for col in ['candidate_id', 'new_candidate_id', 'ra_deg', 'dec_deg', 'x_arcmin', 'y_arcmin', 'major_arcsec', 'minor_arcsec', 'pa_deg', 'v_center_kms', 'Maj_pc', 'Min_pc', 'PA_astro_deg', 'v9_final_score']:
+    for col in ['candidate_id', 'new_candidate_id', 'ra_deg', 'dec_deg', 'x_arcmin', 'y_arcmin', 'major_arcsec', 'minor_arcsec', 'pa_deg', 'v_center_kms', 'Maj_pc', 'Min_pc', 'PA_astro_deg', 'v9_final_score', 'v11_source_candidate_id', 'v11_match_sep_arcsec', 'v11_joint_2dcg_score', 'v11_final_Maj_pc', 'v11_final_Min_pc', 'v11_final_PA_astro_deg', 'v11_final_v_center_kms']:
         if col not in df.columns:
             df[col] = np.nan
         df[col] = pd.to_numeric(df[col], errors='coerce')
@@ -778,6 +831,7 @@ with right:
 
     with st.expander('Global candidate summary PDFs', expanded=False):
         render_candidate_summary_pdfs()
+        render_v11_population_diagnostics()
 
     source_options = ['H I BB86', 'Koch25 new HI candidate', 'Potential new HI Candidate']
     current_source = st.session_state.get('selected_source_type', 'H I BB86')
@@ -872,6 +926,12 @@ with left:
             st.image(str(png_path), width='stretch')
         else:
             pass  # hidden by local patch
+        st.markdown('### 2DCG/v11 diagnostic PNG')
+        v11_png_path = resolve_catalog_path(selected_candidate_row, 'v11_diagnostic_png')
+        if v11_png_path is not None and v11_png_path.exists():
+            st.image(str(v11_png_path), width='stretch')
+        else:
+            st.caption('No v11 diagnostic PNG available for this selected candidate.')
 
 with right:
     if selected_source_type == 'H I BB86' and selected_hi_row is not None:

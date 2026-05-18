@@ -1,0 +1,22 @@
+V11 population summary plots (v2)
+================================
+sample label          : merged247
+n best rows           : 247
+n all-trials rows     : 1235
+label mode            : outliers
+
+Counts by display class:
+  accepted                 : 218
+  failed                   : 19
+  ambiguous_core_and_anti  : 9
+  no_dassa_core            : 1
+
+Median values:
+  cg2d_detection_score     : 0.406296
+  cg2d_beam_fraction_deficit : 0.282573
+  major_factor_v11         : 1.04933
+  final_q_b_over_a         : 0.9
+  trial_velocity_offset_channels : 0
+  hole_peak_sigma          : 20.7991
+  anti_peak_sigma          : 17.6621
+  hole_minus_anti_sigma    : 3.80306
