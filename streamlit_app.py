@@ -21,29 +21,34 @@ BACKGROUND_META = DATA_DIR / 'm31_background_meta.json'
 CANDIDATE_SUMMARY_DIR = APP_DIR / 'figures' / 'candidate_summary_pdfs'
 CANDIDATE_SUMMARY_PDFS = [
     {
+        'title': 'BB86 141 cavités - géométrie 2DCG / joint refit',
+        'caption': 'Distributions des paramètres géométriques utilisés pour les 141 cavités BB86.',
+        'filename': 'bb86_2dcg_joint_histograms_main.pdf',
+    },
+    {
+        'title': 'BB86 table.fits vs géométrie 2DCG',
+        'caption': 'Comparaison entre les valeurs BB86 historiques et la géométrie 2DCG / refit utilisée sur le site.',
+        'filename': 'bb86_table_vs_2dcg_refit_histograms.pdf',
+    },
+    {
+        'title': 'Candidats HI 247 objets - distributions globales',
+        'caption': 'Histogrammes globaux pour les 72 nouveaux candidats retenus et les 175 candidats potentiels.',
+        'filename': 'candidates_247_histograms_main.pdf',
+    },
+    {
         'title': 'Nouveaux 72 candidats - distributions des paramètres',
         'caption': 'Histogrammes globaux pour les 72 candidats H I retenus par le filtre v9.',
         'filename': 'new_hi_candidates_v9_histograms_main.pdf',
     },
     {
         'title': 'Potentiels 175 candidats - distributions des paramètres',
-        'caption': 'Histogrammes globaux pour les 175 candidats potentiels / rejetés par le filtre v9.',
+        'caption': 'Histogrammes globaux pour les 175 candidats potentiels du filtre v9.',
         'filename': 'v9_rejected_175_histograms_main.pdf',
     },
     {
-        'title': 'Potentiels 175 candidats - raisons de rejet',
-        'caption': 'Décompte des raisons de rejet du filtre v9, séparées par famille de critère.',
+        'title': 'Potentiels 175 candidats - critères du statut potentiel',
+        'caption': 'Décompte des critères ayant conduit au statut potentiel dans le filtre v9.',
         'filename': 'v9_rejected_reason_counts_split.pdf',
-    },
-    {
-        'title': 'BB86 table.fits vs géométrie 2DCG/joint',
-        'caption': 'Comparaison globale entre les paramètres BB86 originaux et la géométrie utilisée après CumulativeGrowth2D / joint refit.',
-        'filename': 'bb86_table_vs_2dcg_refit_histograms.pdf',
-    },
-    {
-        'title': 'BB86 - distributions avec géométrie CumulativeGrowth2D',
-        'caption': 'Distributions globales des 141 trous BB86 avec les tailles 2DCG et les paramètres utilisés dans le viewer.',
-        'filename': 'bb86_2dcg_joint_histograms_main.pdf',
     },
 ]
 DISPLAY_FLIP_X = True
@@ -51,13 +56,14 @@ DISPLAY_FLIP_X = True
 ARCSEC_PER_PC = 206265.0 / 690000.0
 PC_PER_ARCMIN = 60.0 / ARCSEC_PER_PC
 
-TRACER_OPTIONS = ['HI', 'Koch25 new HI candidate', 'Potential new HI Candidate', 'UV', 'Hα', 'CO', 'IR', 'X-ray']
+TRACER_OPTIONS = ['HI', 'Koch25 new HI candidate', 'Potential new HI Candidate', 'UV', 'Hα', 'Dust - HELGA', 'CO', 'IR', 'X-ray']
 TRACER_COLORS = {
     'HI': 'deepskyblue',
     'Koch25 new HI candidate': 'lime',
     'Potential new HI Candidate': 'gray',
     'UV': 'violet',
     'Hα': 'red',
+    'Dust - HELGA': 'goldenrod',
     'CO': 'orange',
     'IR': 'gold',
     'X-ray': 'lime',
@@ -68,6 +74,7 @@ TRACER_SYMBOLS = {
     'Potential new HI Candidate': 'x',
     'UV': 'square',
     'Hα': 'triangle-up',
+    'Dust - HELGA': 'hexagon',
     'CO': 'diamond',
     'IR': 'hexagon',
     'X-ray': 'star',
@@ -398,7 +405,7 @@ def nearest_context_tables(row: pd.Series, objects_df: pd.DataFrame, max_radius_
 
     # Context layers only. H I holes and H I candidates are the selected structures;
     # UV/Hα/CO/IR/X-ray remain environmental tracers around them.
-    context_tracers = ['UV', 'Hα', 'CO', 'IR', 'X-ray']
+    context_tracers = ['UV', 'Hα', 'Dust - HELGA', 'CO', 'IR', 'X-ray']
     obj = objects_df.loc[objects_df['tracer'].isin(context_tracers)].copy()
     if obj.empty:
         return pd.DataFrame(), pd.DataFrame()
@@ -604,7 +611,7 @@ def build_local_context_figure(
     # Local zoom always shows environmental tracers, plus H I structures if the
     # user has them enabled in the global map. This keeps the plot aligned with
     # the near-object table without forcing every global layer to be visible.
-    context_tracers = ['UV', 'Hα', 'CO', 'IR', 'X-ray']
+    context_tracers = ['UV', 'Hα', 'Dust - HELGA', 'CO', 'IR', 'X-ray']
     hi_structure_tracers = ['HI', 'Koch25 new HI candidate', 'Potential new HI Candidate']
     chosen = list(selected_tracers or [])
     local_tracers = []
@@ -720,7 +727,7 @@ def build_candidate_table(row: pd.Series) -> pd.DataFrame:
         ('RA [deg]', 'ra_deg'), ('Dec [deg]', 'dec_deg'), ('X [arcmin]', 'x_arcmin'), ('Y [arcmin]', 'y_arcmin'),
         ('v center [km/s]', 'v_center_kms'), ('Maj [pc]', 'Maj_pc'), ('Min [pc]', 'Min_pc'), ('PA [deg]', 'PA_astro_deg'),
         ('major [arcsec]', 'major_arcsec'), ('minor [arcsec]', 'minor_arcsec'), ('v9 score', 'v9_final_score'),
-        ('reject reason', 'v9_reject_reason'), ('notes', 'notes'),
+        ('potential-status criterion', 'v9_reject_reason'), ('notes', 'notes'),
     ]
     rows = []
     for label, col in cols:
