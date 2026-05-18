@@ -793,6 +793,191 @@ def build_candidate_table(row: pd.Series) -> pd.DataFrame:
 
 
 
+
+
+def render_stat_figure_card(title: str, caption: str, png_rel: str | None = None, pdf_rel: str | None = None, csv_rel: str | None = None, key_prefix: str = '') -> None:
+    st.markdown(f'#### {title}')
+    if caption:
+        st.caption(caption)
+
+    png_path = APP_DIR / png_rel if png_rel else None
+    pdf_path = APP_DIR / pdf_rel if pdf_rel else None
+    csv_path = APP_DIR / csv_rel if csv_rel else None
+
+    if png_path is not None and png_path.exists():
+        st.image(str(png_path), width='stretch')
+        st.caption(f'PNG: `{png_path.relative_to(APP_DIR)}`')
+    elif png_rel:
+        st.warning(f'Missing PNG: `{png_rel}`')
+
+    buttons = st.columns(2)
+
+    with buttons[0]:
+        if pdf_path is not None and pdf_path.exists():
+            with pdf_path.open('rb') as fh:
+                st.download_button(
+                    'Download PDF',
+                    data=fh.read(),
+                    file_name=pdf_path.name,
+                    mime='application/pdf',
+                    key=f'{key_prefix}_pdf_{pdf_path.name}',
+                )
+
+    with buttons[1]:
+        if csv_path is not None and csv_path.exists():
+            with csv_path.open('rb') as fh:
+                st.download_button(
+                    'Download CSV',
+                    data=fh.read(),
+                    file_name=csv_path.name,
+                    mime='text/csv',
+                    key=f'{key_prefix}_csv_{csv_path.name}',
+                )
+
+
+def render_global_statistics() -> None:
+    st.subheader('Statistiques globales')
+    st.caption('Histogrammes et figures de population pour les trous BB86, les 72 candidats retenus, les 175 candidats potentiels et la population complète de 247 candidats.')
+
+    groups = {
+        'BB86': [
+            {
+                'title': 'BB86 — 2DCG + joint refit',
+                'caption': 'Distributions des paramètres BB86 mesurés avec le refit 2DCG / joint.',
+                'png': 'figures/final/bb86_2dcg_histograms/bb86_2dcg_joint_histograms_main.png',
+                'pdf': 'figures/final/bb86_2dcg_histograms/bb86_2dcg_joint_histograms_main.pdf',
+                'csv': 'figures/final/bb86_2dcg_histograms/bb86_2dcg_joint_histogram_summary_stats.csv',
+            },
+            {
+                'title': 'BB86 — table originale vs refit 2DCG',
+                'caption': 'Comparaison entre les paramètres de table et les paramètres refittés.',
+                'png': 'figures/final/bb86_2dcg_histograms/bb86_table_vs_2dcg_refit_histograms.png',
+                'pdf': 'figures/final/bb86_2dcg_histograms/bb86_table_vs_2dcg_refit_histograms.pdf',
+                'csv': 'figures/final/bb86_2dcg_histograms/bb86_2dcg_joint_histogram_input_with_derived_columns.csv',
+            },
+        ],
+        '72 retenus': [
+            {
+                'title': '72 candidats retenus — histogrammes principaux',
+                'caption': 'Distributions principales des candidats v9 retenus.',
+                'png': 'figures/final/new_candidates_v9_histograms/new_hi_candidates_v9_histograms_main.png',
+                'pdf': 'figures/final/new_candidates_v9_histograms/new_hi_candidates_v9_histograms_main.pdf',
+                'csv': 'figures/final/new_candidates_v9_histograms/new_hi_candidates_2dcg_v9_histogram_summary_stats.csv',
+            },
+            {
+                'title': '72 candidats retenus — par classe de qualité',
+                'caption': 'Distributions séparées par classe de qualité.',
+                'png': 'figures/final/new_candidates_v9_histograms/new_hi_candidates_v9_histograms_by_quality_class.png',
+                'pdf': 'figures/final/new_candidates_v9_histograms/new_hi_candidates_v9_histograms_by_quality_class.pdf',
+                'csv': 'figures/final/new_candidates_v9_histograms/new_hi_candidates_2dcg_v9_clean_with_derived_columns.csv',
+            },
+        ],
+        '175 potentiels': [
+            {
+                'title': '175 candidats potentiels — histogrammes principaux',
+                'caption': 'Distributions des 175 candidats potentiels.',
+                'png': 'figures/final/potential_candidates_v9_histograms/v9_rejected_175_histograms_main.png',
+                'pdf': 'figures/final/potential_candidates_v9_histograms/v9_rejected_175_histograms_main.pdf',
+                'csv': 'figures/final/potential_candidates_v9_histograms/v9_rejected_175_summary_stats.csv',
+            },
+            {
+                'title': '175 candidats potentiels — raisons de classement',
+                'caption': 'Décompte des critères qui déplacent ces objets dans la classe potentielle.',
+                'png': 'figures/final/potential_candidates_v9_histograms/v9_rejected_reason_counts_split.png',
+                'pdf': 'figures/final/potential_candidates_v9_histograms/v9_rejected_reason_counts_split.pdf',
+                'csv': 'figures/final/potential_candidates_v9_histograms/v9_rejected_reason_counts_split.csv',
+            },
+            {
+                'title': '175 candidats potentiels — top critères',
+                'caption': 'Critères dominants dans la population potentielle.',
+                'png': 'figures/final/potential_candidates_v9_histograms/v9_rejected_reason_counts_combined_top20.png',
+                'pdf': 'figures/final/potential_candidates_v9_histograms/v9_rejected_reason_counts_combined_top20.pdf',
+                'csv': 'figures/final/potential_candidates_v9_histograms/v9_rejected_reason_counts_combined.csv',
+            },
+        ],
+        '247 total': [
+            {
+                'title': '247 candidats — 72 retenus vs 175 potentiels',
+                'caption': 'Comparaison des distributions entre les deux sous-populations.',
+                'png': 'figures/final/potential_candidates_v9_histograms/v9_kept72_vs_rejected175_histograms.png',
+                'pdf': 'figures/final/potential_candidates_v9_histograms/v9_kept72_vs_rejected175_histograms.pdf',
+                'csv': 'figures/final/potential_candidates_v9_histograms/v9_all_247_summary_stats.csv',
+            },
+        ],
+        'v11 population': [
+            {
+                'title': 'v11 population 247 — counts',
+                'caption': 'Comptages globaux des classes et statuts v11.',
+                'png': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_counts.png',
+                'csv': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv',
+            },
+            {
+                'title': 'v11 population 247 — histogrammes',
+                'caption': 'Histogrammes v11 de la population complète.',
+                'png': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_histograms.png',
+                'csv': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv',
+            },
+            {
+                'title': 'v11 population 247 — géométrie',
+                'caption': 'Plans géométriques v11.',
+                'png': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_geometry_scatter.png',
+                'csv': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv',
+            },
+            {
+                'title': 'v11 population 247 — core/control',
+                'caption': 'Comparaison core/control des scores et déficits.',
+                'png': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_core_control_scatter.png',
+                'csv': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv',
+            },
+            {
+                'title': 'v11 population 247 — vitesses testées',
+                'caption': 'Scores selon les essais en vitesse.',
+                'png': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_trial_velocity_scores.png',
+                'csv': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv',
+            },
+        ],
+    }
+
+    options = list(groups.keys())
+
+    if hasattr(st, 'segmented_control'):
+        chosen = st.segmented_control(
+            'Population',
+            options,
+            default='BB86',
+            key='stats_population_group',
+            width='stretch',
+        )
+    else:
+        chosen = st.radio(
+            'Population',
+            options,
+            index=0,
+            horizontal=True,
+            key='stats_population_group_radio',
+        )
+
+    if not chosen:
+        chosen = 'BB86'
+
+    st.markdown(f'### {chosen}')
+
+    cards = groups[chosen]
+    for i in range(0, len(cards), 2):
+        cols = st.columns(2)
+        for j, card in enumerate(cards[i:i + 2]):
+            with cols[j]:
+                with st.container(border=True):
+                    render_stat_figure_card(
+                        title=card.get('title', ''),
+                        caption=card.get('caption', ''),
+                        png_rel=card.get('png'),
+                        pdf_rel=card.get('pdf'),
+                        csv_rel=card.get('csv'),
+                        key_prefix=f'stats_{chosen}_{i}_{j}'.replace(' ', '_'),
+                    )
+
+
 def render_multitracer_panel(selected_source_type: str, selected_hi_row, selected_candidate_row) -> None:
     st.subheader('Multi-tracer context')
 
@@ -878,10 +1063,11 @@ if 'selected_candidate_uid' not in st.session_state:
 if 'clicked_object_uid' not in st.session_state:
     st.session_state['clicked_object_uid'] = ''
 
-tab_detection, tab_multi = st.tabs([
+tab_detection, tab_multi, tab_stats = st.tabs([
     'Détection / validation H I',
     'Multi-traceurs',
-])
+    'Statistiques globales',
+], on_change='rerun')
 
 with tab_detection:
     left, right = st.columns([1.45, 1.0])
@@ -895,10 +1081,6 @@ with tab_detection:
         st.write(f'BB86 H I videos found: `{n_video}/{n_hi}`')
         st.write(f'Koch25 new H I candidates: `{n_clean}`')
         st.write(f'Potential new H I candidates: `{n_rej}`')
-
-        with st.expander('Global candidate summary PDFs', expanded=False):
-            render_candidate_summary_pdfs()
-            render_v11_population_diagnostics()
 
         source_options = ['H I BB86', 'Koch25 new HI candidate', 'Potential new HI Candidate']
         current_source = st.session_state.get('selected_source_type', 'H I BB86')
@@ -1206,3 +1388,6 @@ with tab_detection:
 
 with tab_multi:
     render_multitracer_panel(selected_source_type, selected_hi_row, selected_candidate_row)
+
+with tab_stats:
+    render_global_statistics()
