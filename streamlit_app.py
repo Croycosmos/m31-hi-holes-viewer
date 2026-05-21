@@ -1447,12 +1447,6 @@ def render_context_tables_and_zoom(row: pd.Series, objects_df: pd.DataFrame, sel
     )
     if local_fig is not None:
         st.markdown(f'### Local 3R zoom — {selected_object_title(row, str(row.get("tracer", "")))}')
-        st.image(
-            "figures/final/bb86_vs_new247_2dcg/bb86_2dcg_vs_new247_2dcg_histograms_samebins_orange.png",
-            use_container_width=True,
-        )
-        st.markdown(
-            "[Open PDF](figures/final/bb86_vs_new247_2dcg/bb86_2dcg_vs_new247_2dcg_histograms_samebins_orange.pdf)"
         )
 
 def render_object_browser(hi_df: pd.DataFrame, candidates_df: pd.DataFrame) -> None:
