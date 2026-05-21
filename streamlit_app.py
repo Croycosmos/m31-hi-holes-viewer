@@ -8,16 +8,6 @@ import math
 import numpy as np
 import pandas as pd
 import streamlit as st
-
-_RENDERED_ONCE_THIS_RUN = set()
-
-def _claim_render_once(key: str) -> bool:
-    """Return True once per Streamlit script execution."""
-    if key in _RENDERED_ONCE_THIS_RUN:
-        return False
-    _RENDERED_ONCE_THIS_RUN.add(key)
-    return True
-
 import streamlit.components.v1 as components
 import plotly.graph_objects as go
 
@@ -258,721 +248,669 @@ def render_v11_population_diagnostics() -> None:
             if path.exists():
                 size_mb = path.stat().st_size / 1024**2
                 st.write(f'File available — `{size_mb:.1f} MB`')
-                if _claim_render_once("bb86_vs_new247_stats_figure"):
-                    st.image(str(path), width='stretch')
-                    with path.open('rb') as fh:
-                        st.download_button(
-                            'Download PNG',
-                            data=fh.read(),
-                            file_name=path.name,
-                            mime='image/png',
-                            key=f'v11_population_{i}_{path.name}',
-                        )
-                                else:
-                    st.warning(f'Missing file: `{path.relative_to(APP_DIR)}`')
-                    
-                    
-                    def render_candidate_summary_pdfs() -> None:
-                        st.markdown('### Candidate summary documents')
-                        st.caption('Global diagnostic PDF panels for the v9 new-candidate catalogues.')
-                        for i, item in enumerate(CANDIDATE_SUMMARY_PDFS):
-                            path = CANDIDATE_SUMMARY_DIR / item['filename']
-                            with st.expander(item['title'], expanded=(i == 0)):
-                                st.caption(item['caption'])
-                                if path.exists():
-                    size_mb = path.stat().st_size / 1024**2
-                    st.write(f'File available — `{size_mb:.1f} MB`')
-                    with path.open('rb') as fh:
-                        st.download_button(
-                            'Download PDF',
-                            data=fh.read(),
-                            file_name=path.name,
-                            mime='application/pdf',
-                            key=f'download_summary_pdf_{i}',
-                        )
-                    render_pdf_inline(path, height=680)
-                                else:
-                    st.info(f'PDF not found: `{path.relative_to(APP_DIR)}`')
-                    
-                    
-                    def transform_background_extent(meta: dict) -> dict:
-                        x_min = float(meta['x_min'])
-                        x_max = float(meta['x_max'])
-                        y_min = float(meta['y_min'])
-                        y_max = float(meta['y_max'])
-                        if DISPLAY_FLIP_X:
-                            x0 = -x_max
-                            x1 = -x_min
-                        else:
-                            x0 = x_min
-                            x1 = x_max
-                        out = {'x_min': float(min(x0, x1)), 'x_max': float(max(x0, x1)), 'y_min': y_min, 'y_max': y_max}
-                        out['sizex'] = out['x_max'] - out['x_min']
-                        out['sizey'] = out['y_max'] - out['y_min']
-                        return out
-                    
-                    
-                    def resolve_video_path(row: pd.Series) -> Path | None:
-                        raw = str(row.get('video_path', '')).strip()
-                        if not raw or raw.lower() in {'nan', 'none'}:
-                            return None
-                        path = Path(raw)
-                        if path.is_absolute():
-                            path = Path('videos') / path.name
-                        return APP_DIR / path
-                    
-                    
-                    def resolve_video_url(row: pd.Series) -> str:
-                        raw = str(row.get('video_url', '')).strip()
-                        if not raw or raw.lower() in {'nan', 'none'}:
-                            return ''
-                        return raw
-                    
-                    
-                    def resolve_optional_path(row: pd.Series, column: str) -> Path | None:
-                        raw = str(row.get(column, '')).strip()
-                        if not raw or raw.lower() in {'nan', 'none'}:
-                            return None
-                        path = Path(raw)
-                        if path.is_absolute():
-                            path = Path(path.name)
-                        return APP_DIR / path
-                    
-                    
-                    def render_optional_png(row: pd.Series, title: str, column: str, missing_message: str) -> None:
-                        st.markdown(f'### {title}')
-                        path = resolve_optional_path(row, column)
-                        if path is not None and path.exists():
-                            st.image(str(path), width='stretch')
-                        else:
-                            st.info(missing_message)
-                    
-                    
-                    def _row_value(row: pd.Series, column: str | None) -> str:
-                        if column is None or column not in row.index:
-                            return ''
-                        return value_to_text(row[column])
-                    
-                    
-                    def build_refit_table(row: pd.Series) -> pd.DataFrame:
-                        specs = [
-                            ('Maj [pc]', 'joint__Maj_best_pc', 'cg2d__Maj_growth_pc'),
-                            ('Min [pc]', 'joint__Min_best_pc', 'cg2d__Min_growth_pc'),
-                            ('PA [deg]', 'joint__PA_astro_best_deg', 'cg2d__PA_geometry_deg'),
-                            ('HRV [km/s]', 'joint__HRV_used_kms', 'cg2d__hrv_kms'),
-                            ('N channels', 'joint__nch_used', 'cg2d__nch_best'),
-                            ('v min [km/s]', None, 'cg2d__vel_lo_kms'),
-                            ('v max [km/s]', None, 'cg2d__vel_hi_kms'),
-                            ('dx [arcsec]', 'joint__dx_best_arcsec', None),
-                            ('dy [arcsec]', 'joint__dy_best_arcsec', None),
-                            ('dr [arcsec]', 'joint__dr_best_arcsec', None),
-                            ('contrast base', 'joint__contrast_base', None),
-                            ('contrast best', 'joint__contrast_best', None),
-                            ('ΔI/σ base', 'joint__delta_I_sn_base', None),
-                            ('ΔI/σ best', 'joint__delta_I_sn_best', 'cg2d__delta_I_sn'),
-                            ('median Nbeam center', None, 'cg2d__med_Nbeam_center'),
-                            ('median Nbeam ring', None, 'cg2d__med_Nbeam_ring'),
-                            ('major r50 [arcsec]', None, 'cg2d__major_r50_deficit_arcsec'),
-                            ('major r80 [arcsec]', None, 'cg2d__major_r80_deficit_arcsec'),
-                            ('minor r50 [arcsec]', None, 'cg2d__minor_r50_deficit_arcsec'),
-                            ('minor r80 [arcsec]', None, 'cg2d__minor_r80_deficit_arcsec'),
-                            ('major growth score', None, 'cg2d__major_growth_score'),
-                            ('minor growth score', None, 'cg2d__minor_growth_score'),
-                            ('status / source', 'joint__status', 'cg2d__major_source'),
-                        ]
-                        rows = []
-                        for parameter, joint_col, cg2d_col in specs:
-                            joint_val = _row_value(row, joint_col)
-                            cg2d_val = _row_value(row, cg2d_col)
-                            if joint_val or cg2d_val:
-                                rows.append({'parameter': parameter, 'joint_contrast_refit': joint_val, '2DCG': cg2d_val})
-                        return pd.DataFrame(rows)
-                    
-                    
-                    def hi_size_pc(row: pd.Series) -> tuple[float, float]:
-                        maj_candidates = ['cg2d__Maj_growth_pc', 'joint__Maj_best_pc', 'Maj']
-                        min_candidates = ['cg2d__Min_growth_pc', 'joint__Min_best_pc', 'Min']
-                        maj = next((numeric(row, c) for c in maj_candidates if np.isfinite(numeric(row, c)) and numeric(row, c) > 0), float('nan'))
-                        minu = next((numeric(row, c) for c in min_candidates if np.isfinite(numeric(row, c)) and numeric(row, c) > 0), float('nan'))
-                        return maj, minu
-                    
-                    
-                    def hi_radius_arcmin(row: pd.Series) -> float:
-                        maj, minu = hi_size_pc(row)
-                        if np.isfinite(maj) and np.isfinite(minu) and maj > 0 and minu > 0:
-                            return 0.5 * math.sqrt(maj * minu) / PC_PER_ARCMIN
-                        if np.isfinite(maj) and maj > 0:
-                            return 0.5 * maj / PC_PER_ARCMIN
-                        return 1.0
-                    
-                    
-                    def selected_hi_geometry(row: pd.Series) -> dict:
-                        # BB86 rows store sizes in pc. New-candidate rows may store angular sizes directly.
-                        major_arcsec = numeric(row, 'major_arcsec')
-                        minor_arcsec = numeric(row, 'minor_arcsec')
-                        if np.isfinite(major_arcsec) and major_arcsec > 0:
-                            a = 0.5 * major_arcsec / 60.0
-                            b = 0.5 * minor_arcsec / 60.0 if np.isfinite(minor_arcsec) and minor_arcsec > 0 else a
-                            r_eq = math.sqrt(max(a, 1e-9) * max(b, 1e-9))
-                        else:
-                            maj, minu = hi_size_pc(row)
-                            if not np.isfinite(maj) or maj <= 0:
-                                maj = numeric(row, 'Maj')
-                            if not np.isfinite(minu) or minu <= 0:
-                                minu = numeric(row, 'Min')
-                            a = 0.5 * maj / PC_PER_ARCMIN if np.isfinite(maj) and maj > 0 else hi_radius_arcmin(row)
-                            b = 0.5 * minu / PC_PER_ARCMIN if np.isfinite(minu) and minu > 0 else hi_radius_arcmin(row)
-                            r_eq = hi_radius_arcmin(row)
-                        pa = numeric(row, 'cg2d__PA_geometry_deg')
-                        if not np.isfinite(pa):
-                            pa = numeric(row, 'joint__PA_astro_best_deg')
-                        if not np.isfinite(pa):
-                            pa = numeric(row, 'PA_astro_deg')
-                        if not np.isfinite(pa):
-                            pa = numeric(row, 'pa_deg')
-                        if not np.isfinite(pa):
-                            pa = numeric(row, 'PA')
-                        if not np.isfinite(pa):
-                            pa = 0.0
-                        return {'a': a, 'b': b, 'pa': pa, 'r_eq': r_eq}
-                    
-                    
-                    def ellipse_points(cx: float, cy: float, a: float, b: float, pa_deg: float, n: int = 181) -> tuple[np.ndarray, np.ndarray]:
-                        t = np.linspace(0.0, 2.0 * np.pi, n)
-                        pa = np.deg2rad(pa_deg)
-                        # PA measured from North toward East in the native x=East, y=North plane.
-                        x = cx + a * np.cos(t) * np.sin(pa) + b * np.sin(t) * np.sin(pa + np.pi / 2.0)
-                        y = cy + a * np.cos(t) * np.cos(pa) + b * np.sin(t) * np.cos(pa + np.pi / 2.0)
-                        if DISPLAY_FLIP_X:
-                            x = -x
-                        return x, y
-                    
-                    
-                    def circle_points(cx: float, cy: float, radius: float, n: int = 181) -> tuple[np.ndarray, np.ndarray]:
-                        t = np.linspace(0.0, 2.0 * np.pi, n)
-                        x = cx + radius * np.cos(t)
-                        y = cy + radius * np.sin(t)
-                        if DISPLAY_FLIP_X:
-                            x = -x
-                        return x, y
-                    
-                    
-                    def nearest_context_tables(row: pd.Series, objects_df: pd.DataFrame, max_radius_factor: float = 3.0) -> tuple[pd.DataFrame, pd.DataFrame]:
-                        cx = numeric(row, 'x_arcmin')
-                        cy = numeric(row, 'y_arcmin')
-                        geom = selected_hi_geometry(row)
-                        r = geom.get('r_eq', float('nan'))
-                        if not np.isfinite(cx) or not np.isfinite(cy) or not np.isfinite(r) or r <= 0:
-                            return pd.DataFrame(), pd.DataFrame()
-                    
-                        # Context layers only. H I holes and H I candidates are the selected structures;
-                        # UV/Hα/CO/IR/X-ray remain environmental tracers around them.
-                        context_tracers = ['UV', 'Hα', 'Dust - HELGA', 'CO', 'IR', 'X-ray']
-                        obj = objects_df.loc[objects_df['tracer'].isin(context_tracers)].copy()
-                        if obj.empty:
-                            return pd.DataFrame(), pd.DataFrame()
-                    
-                        obj['distance_arcmin'] = np.sqrt((obj['x_arcmin'] - cx) ** 2 + (obj['y_arcmin'] - cy) ** 2)
-                        obj['distance_R'] = obj['distance_arcmin'] / r
-                        near = obj.loc[obj['distance_R'] <= max_radius_factor].copy().sort_values(['distance_R', 'tracer'])
-                    
-                        rows = []
-                        for tracer in context_tracers:
-                            sub = obj.loc[obj['tracer'] == tracer].copy()
-                            if sub.empty:
-                                rows.append({'tracer': tracer, 'N ≤ 1R': 0, 'N ≤ 2R': 0, 'N ≤ 3R': 0, 'nearest': '', 'nearest distance [arcmin]': '', 'nearest distance [R]': ''})
-                                continue
-                            sub = sub.sort_values('distance_arcmin')
-                            nearest = sub.iloc[0]
-                            rows.append({
-                                'tracer': tracer,
-                                'N ≤ 1R': int((sub['distance_R'] <= 1.0).sum()),
-                                'N ≤ 2R': int((sub['distance_R'] <= 2.0).sum()),
-                                'N ≤ 3R': int((sub['distance_R'] <= 3.0).sum()),
-                                'nearest': str(nearest.get('display_label', '')),
-                                'nearest distance [arcmin]': f'{nearest["distance_arcmin"]:.2f}',
-                                'nearest distance [R]': f'{nearest["distance_R"]:.2f}',
-                            })
-                        summary = pd.DataFrame(rows)
-                        keep_cols = ['display_label', 'tracer', 'source_catalog', 'distance_arcmin', 'distance_R', 'x_arcmin', 'y_arcmin', 'age_myr', 'mass_msun', 'luminosity', 'notes']
-                        keep_cols = [c for c in keep_cols if c in near.columns]
-                        near_table = near[keep_cols].head(80).copy()
-                        for _txt_col in ['display_label', 'source_catalog', 'notes', 'tracer']:
-                            if _txt_col in near_table.columns:
-                                near_table[_txt_col] = (
-                    near_table[_txt_col]
-                    .fillna('')
-                    .astype(str)
-                    .str.replace('not a cavity', 'context tracer', case=False, regex=False)
-                    .str.replace('Not a cavity', 'context tracer', regex=False)
-                                )
-                        for _txt_col in ['display_label', 'source_catalog', 'notes', 'tracer']:
-                            if _txt_col in near_table.columns:
-                                near_table[_txt_col] = (
-                    near_table[_txt_col]
-                    .fillna('')
-                    .astype(str)
-                    .str.replace('not a cavity', 'context tracer', case=False, regex=False)
-                    .str.replace('Not a cavity', 'context tracer', regex=False)
-                                )
-                        for _txt_col in ['display_label', 'source_catalog', 'notes', 'tracer']:
-                            if _txt_col in near_table.columns:
-                                near_table[_txt_col] = (
-                    near_table[_txt_col]
-                    .fillna('')
-                    .astype(str)
-                    .str.replace('not a cavity', 'context tracer', case=False, regex=False)
-                    .str.replace('Not a cavity', 'context tracer', regex=False)
-                                )
-                        for col in ['distance_arcmin', 'distance_R']:
-                            if col in near_table.columns:
-                                near_table[col] = near_table[col].map(lambda v: f'{float(v):.3g}' if pd.notna(v) else '')
-                        return summary, near_table
-                    
-                    
-                    def video_player_from_file(path: Path, height: int = 520) -> None:
-                        if not path.exists():
-                            st.error(f'Video file not found: {path}')
-                            return
-                        video_bytes = path.read_bytes()
-                        video_b64 = base64.b64encode(video_bytes).decode('utf-8')
-                        html = f"""
-                        <video width="100%" controls preload="metadata" style="background-color: black;">
-                            <source src="data:video/mp4;base64,{video_b64}" type="video/mp4">
-                            Your browser cannot play this MP4 video.
-                        </video>
-                        """
-                        components.html(html, height=height)
-                        st.download_button(label='Download MP4', data=video_bytes, file_name=path.name, mime='video/mp4', width='stretch')
-                    
-                    
-                    def video_player_from_url(url: str, height: int = 520) -> None:
-                        url = str(url).strip()
-                        if not url:
-                            st.error('Empty video URL.')
-                            return
-                        html = f"""
-                        <video width="100%" controls preload="metadata" style="background-color: black;">
-                            <source src="{url}" type="video/mp4">
-                            Your browser cannot play this MP4 video.
-                        </video>
-                        <p style="font-size: 0.85rem;">
-                            <a href="{url}" target="_blank" rel="noopener noreferrer">Open / download MP4</a>
-                        </p>
-                        """
-                        components.html(html, height=height)
-                    
-                    
-                    def build_m31_figure(
-                        df_visible: pd.DataFrame,
-                        df_extent: pd.DataFrame,
-                        background_png: Path,
-                        meta: dict,
-                        selected_hi_row: pd.Series | None,
-                        show_search_rings: bool,
-                    ) -> go.Figure:
-                        fig = go.Figure()
-                        has_bg = background_png.exists() and bool(meta)
-                        if has_bg:
-                            bg = transform_background_extent(meta)
-                            fig.add_layout_image(dict(
-                                source=image_file_to_data_uri(background_png), xref='x', yref='y', x=bg['x_min'], y=bg['y_max'],
-                                sizex=bg['sizex'], sizey=bg['sizey'], sizing='stretch', opacity=1.0, layer='below'))
-                            fig.update_xaxes(range=[bg['x_min'], bg['x_max']])
-                            fig.update_yaxes(range=[bg['y_min'], bg['y_max']])
-                        else:
-                            xpad = 10.0
-                            ypad = 10.0
-                            fig.update_xaxes(range=[float(df_extent['x_plot'].min()) - xpad, float(df_extent['x_plot'].max()) + xpad])
-                            fig.update_yaxes(range=[float(df_extent['y_plot'].min()) - ypad, float(df_extent['y_plot'].max()) + ypad])
-                    
-                        for tracer in TRACER_OPTIONS:
-                            sub = df_visible.loc[df_visible['tracer'] == tracer].copy()
-                            if sub.empty:
-                                continue
-                            marker = dict(
-                                size=sub['marker_size'],
-                                color=TRACER_COLORS.get(tracer, 'white'),
-                                opacity=0.82 if tracer != 'HI' else 0.9,
-                                line=dict(width=0.6, color='white'),
-                                symbol=TRACER_SYMBOLS.get(tracer, 'circle'),
-                            )
-                            if tracer == 'HI':
-                                marker['opacity'] = 0.88
-                            fig.add_trace(go.Scatter(
-                                x=sub['x_plot'], y=sub['y_plot'], mode='markers', name=tracer,
-                                marker=marker,
-                                text=sub['display_label'],
-                                customdata=sub[['object_uid', 'tracer', 'source_catalog', 'hi_seq', 'x_arcmin', 'y_arcmin', 'major_arcsec', 'minor_arcsec', 'pa_deg']].fillna('').to_numpy(),
-                                hovertemplate=(
-                    '%{text}<br>'
-                    'Tracer=%{customdata[1]}<br>'
-                    'Catalog=%{customdata[2]}<br>'
-                    'X=%{customdata[4]:.2f} arcmin<br>'
-                    'Y=%{customdata[5]:.2f} arcmin<br>'
-                    'Major=%{customdata[6]} arcsec<br>'
-                    'Minor=%{customdata[7]} arcsec<br>'
-                    'PA=%{customdata[8]} deg<br>'
-                    '<extra></extra>'
-                                ),
-                            ))
-                    
-                        if selected_hi_row is not None:
-                            cx = numeric(selected_hi_row, 'x_arcmin')
-                            cy = numeric(selected_hi_row, 'y_arcmin')
-                            if np.isfinite(cx) and np.isfinite(cy):
-                                tracer = str(selected_hi_row.get('tracer', 'HI'))
-                                is_bb86_hi = 'Seq' in selected_hi_row.index and tracer in {'HI', '', 'nan'}
-                                geom = selected_hi_geometry(selected_hi_row)
-                    
-                                if is_bb86_hi:
-                    seq = int(selected_hi_row['Seq'])
-                    label = f'HI {seq:03d}'
-                    trace_name = 'selected H I ellipse'
-                    line_color = 'red'
-                    marker_color = 'red'
-                    marker_symbol = 'circle-open'
-                                else:
-                    label = str(selected_hi_row.get('display_label', selected_hi_row.get('object_uid', 'selected object')))
-                    trace_name = f'selected {tracer} ellipse'
-                    line_color = TRACER_COLORS.get(tracer, 'red')
-                    marker_color = line_color
-                    marker_symbol = 'circle-open'
-                    
-                                xe, ye = ellipse_points(cx, cy, geom['a'], geom['b'], geom['pa'])
-                                fig.add_trace(go.Scatter(
-                    x=xe, y=ye, mode='lines', name=trace_name,
-                    line=dict(color=line_color, width=3), hoverinfo='skip'
-                                ))
-                    
-                                # 1R/2R/3R are drawn for any selected H I structure: BB86 holes,
-                                # Koch25 new candidates, and low-confidence/potential candidates.
-                                if show_search_rings:
-                    for factor, dash in [(1, 'dot'), (2, 'dash'), (3, 'longdash')]:
-                        xc, yc = circle_points(cx, cy, geom['r_eq'] * factor)
-                        fig.add_trace(go.Scatter(
-                            x=xc, y=yc, mode='lines', name=f'{factor}R search ring',
-                            line=dict(color='white', width=1, dash=dash), opacity=0.65, hoverinfo='skip'
-                        ))
-                    
-                                fig.add_trace(go.Scatter(
-                    x=[-cx if DISPLAY_FLIP_X else cx], y=[cy], mode='markers+text', name='selected object', showlegend=False, marker=dict(size=21, color=marker_color, symbol=marker_symbol, line=dict(width=3.0, color=marker_color)),
-                    text=[label], textposition='top center', textfont=dict(color=marker_color, size=13), hoverinfo='skip'
-                                ))
-                    
-                        x_title = 'Displayed X [arcmin] — East left / West right' if DISPLAY_FLIP_X else 'X [arcmin]'
-                        fig.update_layout(
-                            title='M31 — multi-tracer context map', template='plotly_dark', height=820,
-                            margin=dict(l=20, r=20, t=60, b=20),
-                            legend=dict(bgcolor='rgba(0,0,0,0.35)', bordercolor='rgba(255,255,255,0.25)', borderwidth=1),
-                            xaxis_title=x_title, yaxis_title='Y [arcmin] — North/South', clickmode='event+select')
-                        fig.update_yaxes(scaleanchor='x', scaleratio=1, showgrid=False, zeroline=False)
-                        fig.update_xaxes(showgrid=False, zeroline=False)
-                        return fig
-                    
-                    
-                    def build_local_context_figure(
-                        selected_row: pd.Series,
-                        objects_df: pd.DataFrame,
-                        background_png: Path,
-                        meta: dict,
-                        show_search_rings: bool,
-                        selected_tracers: list[str] | None = None,
-                    ) -> go.Figure | None:
-                        """Build an interactive 3R local zoom around the selected H I structure.
-                    
-                        The zoom is derived from the same x/y offset system as the global M31 map.
-                        It uses the same background image and marker conventions, then restricts the
-                        axes to a region slightly larger than 3R.
-                        """
-                        cx = numeric(selected_row, 'x_arcmin')
-                        cy = numeric(selected_row, 'y_arcmin')
-                        geom = selected_hi_geometry(selected_row)
-                        r_eq = float(geom.get('r_eq', np.nan))
-                        if not (np.isfinite(cx) and np.isfinite(cy) and np.isfinite(r_eq) and r_eq > 0):
-                            return None
-                    
-                        x0 = -cx if DISPLAY_FLIP_X else cx
-                        y0 = cy
-                        half_size = 3.6 * r_eq
-                    
-                        # Local zoom always shows environmental tracers, plus H I structures if the
-                        # user has them enabled in the global map. This keeps the plot aligned with
-                        # the near-object table without forcing every global layer to be visible.
-                        context_tracers = ['UV', 'Hα', 'Dust - HELGA', 'CO', 'IR', 'X-ray']
-                        hi_structure_tracers = ['HI', 'Koch25 new HI candidate', 'Potential new HI Candidate']
-                        chosen = list(selected_tracers or [])
-                        local_tracers = []
-                        for tracer in context_tracers + hi_structure_tracers + chosen:
-                            if tracer not in local_tracers:
-                                local_tracers.append(tracer)
-                    
-                        local = objects_df.loc[objects_df['tracer'].isin(local_tracers)].copy()
-                        if not local.empty:
-                            local = local.loc[
-                                np.isfinite(local['x_plot'])
-                                & np.isfinite(local['y_plot'])
-                                & (local['x_plot'] >= x0 - half_size)
-                                & (local['x_plot'] <= x0 + half_size)
-                                & (local['y_plot'] >= y0 - half_size)
-                                & (local['y_plot'] <= y0 + half_size)
-                            ].copy()
-                    
-                        title = str(selected_row.get('display_label', selected_row.get('object_label', selected_row.get('Seq_str', 'selected object'))))
-                        if not title or title.lower() in {'nan', 'none'}:
-                            title = 'selected object'
-                    
-                        fig = build_m31_figure(
-                            df_visible=local,
-                            df_extent=objects_df,
-                            background_png=background_png,
-                            meta=meta,
-                            selected_hi_row=selected_row,
-                            show_search_rings=show_search_rings,
-                        )
-                        fig.update_xaxes(range=[x0 - half_size, x0 + half_size])
-                        fig.update_yaxes(range=[y0 - half_size, y0 + half_size])
-                        # The Streamlit section title above the chart carries the label.
-                        # Keep the Plotly title empty so it cannot overlap the horizontal legend.
-                        fig.update_layout(
-                            title=None,
-                            height=560,
-                            margin=dict(l=20, r=20, t=82, b=20),
-                            legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='left', x=0.0),
-                        )
-                        return fig
-                    
-                    
-                    def get_clicked_object(event) -> dict | None:
-                        points = []
-                        try:
-                            points = event.selection.points
-                        except Exception:
-                            try:
-                                points = event['selection']['points']
-                            except Exception:
-                                points = []
-                        if not points:
-                            return None
-                        p = points[0]
-                        custom = p.get('customdata') if hasattr(p, 'get') else None
-                        if custom is None or len(custom) < 4:
-                            return None
-                        return {'object_uid': str(custom[0]), 'tracer': str(custom[1]), 'source_catalog': str(custom[2]), 'hi_seq': custom[3]}
-                    
-                    
-                    def build_external_object_table(obj_row: pd.Series) -> pd.DataFrame:
-                        cols = [
-                            ('tracer', 'tracer'), ('catalog', 'source_catalog'), ('label', 'display_label'),
-                            ('RA [deg]', 'ra_deg'), ('Dec [deg]', 'dec_deg'), ('X [arcmin]', 'x_arcmin'), ('Y [arcmin]', 'y_arcmin'),
-                            ('major [arcsec]', 'major_arcsec'), ('minor [arcsec]', 'minor_arcsec'), ('PA [deg]', 'pa_deg'),
-                            ('flux', 'flux'), ('luminosity', 'luminosity'), ('area [pc²]', 'area_pc2'),
-                            ('age [Myr]', 'age_myr'), ('mass [M☉]', 'mass_msun'), ('notes', 'notes'),
-                        ]
-                        rows = []
-                        for label, col in cols:
-                            if col in obj_row.index:
-                                val = value_to_text(obj_row[col])
-                                if val:
-                    rows.append({'parameter': label, 'value': val})
-                        return pd.DataFrame(rows)
-                    
-                    
-                    
-                    @st.cache_data(show_spinner=False)
-                    def load_new_candidates_catalog(path: Path) -> pd.DataFrame:
-                        if not path.exists():
-                            return pd.DataFrame()
-                        df = pd.read_csv(path)
-                        if df.empty:
-                            return df
-                        for col in ['object_uid', 'tracer', 'source_catalog', 'display_label', 'validation_png', 'video_url', 'video_release_url', 'video_path', 'video_name', 'video_release_tag', 'v11_diagnostic_png', 'v11_plot_class', 'v11_passes_2dcg']:
-                            if col not in df.columns:
-                                df[col] = ''
-                            df[col] = df[col].fillna('').astype(str)
-                        for col in ['candidate_id', 'new_candidate_id', 'ra_deg', 'dec_deg', 'x_arcmin', 'y_arcmin', 'major_arcsec', 'minor_arcsec', 'pa_deg', 'v_center_kms', 'Maj_pc', 'Min_pc', 'PA_astro_deg', 'v9_final_score', 'v11_source_candidate_id', 'v11_match_sep_arcsec', 'v11_joint_2dcg_score', 'v11_final_Maj_pc', 'v11_final_Min_pc', 'v11_final_PA_astro_deg', 'v11_final_v_center_kms']:
-                            if col not in df.columns:
-                                df[col] = np.nan
-                            df[col] = pd.to_numeric(df[col], errors='coerce')
-                        df['x_plot'] = -df['x_arcmin'] if DISPLAY_FLIP_X else df['x_arcmin']
-                        df['y_plot'] = df['y_arcmin']
-                        return df
-                    
-                    
-                    def resolve_catalog_path(row: pd.Series, column: str) -> Path | None:
-                        raw = str(row.get(column, '')).strip()
-                        if not raw or raw.lower() in {'nan', 'none'}:
-                            return None
-                        path = Path(raw)
-                        if path.is_absolute():
-                            return path
-                        return APP_DIR / path
-                    
-                    
-                    def build_candidate_table(row: pd.Series) -> pd.DataFrame:
-                        cols = [
-                            ('candidate ID', 'candidate_id'),
-                            ('RA [deg]', 'ra_deg'), ('Dec [deg]', 'dec_deg'),
-                            ('offset East/West from M31 centre [arcmin]', 'x_arcmin'),
-                            ('offset North/South from M31 centre [arcmin]', 'y_arcmin'),
-                            ('v centre [km/s]', 'v_center_kms'),
-                            ('Maj [pc]', 'Maj_pc'), ('Min [pc]', 'Min_pc'), ('PA [deg]', 'PA_astro_deg'),
-                            ('major [arcsec]', 'major_arcsec'), ('minor [arcsec]', 'minor_arcsec'),
-                            ('2DCG source ID', 'v11_source_candidate_id'),
-                            ('2DCG match separation [arcsec]', 'v11_match_sep_arcsec'),
-                            ('2DCG refit Maj [pc]', 'v11_final_Maj_pc'),
-                            ('2DCG refit Min [pc]', 'v11_final_Min_pc'),
-                            ('2DCG refit PA [deg]', 'v11_final_PA_astro_deg'),
-                            ('2DCG refit v centre [km/s]', 'v11_final_v_center_kms'),
-                            ('2DCG class', 'v11_plot_class'),
-                            ('passes 2DCG', 'v11_passes_2dcg'),
-                        ]
-                        rows = []
-                        for label, col in cols:
-                            if col in row.index:
-                                val = value_to_text(row[col])
-                                if val:
-                    rows.append({'parameter': label, 'value': val})
-                        return pd.DataFrame(rows)
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    def render_stat_figure_card(title: str, caption: str, png_rel: str | None = None, pdf_rel: str | None = None, csv_rel: str | None = None, key_prefix: str = '') -> None:
-                        st.markdown(f'#### {title}')
-                        if caption:
-                            st.caption(caption)
-                    
-                        png_path = APP_DIR / png_rel if png_rel else None
-                        pdf_path = APP_DIR / pdf_rel if pdf_rel else None
-                        csv_path = APP_DIR / csv_rel if csv_rel else None
-                    
-                        if png_path is not None and png_path.exists():
-                            st.image(str(png_path), width='stretch')
-                            st.caption('PNG available for this figure.')
-                        elif png_rel:
-                            st.warning(f'Missing PNG: `{png_rel}`')
-                    
-                        buttons = st.columns(2)
-                    
-                        with buttons[0]:
-                            if pdf_path is not None and pdf_path.exists():
-                                with pdf_path.open('rb') as fh:
+                st.image(str(path), width='stretch')
+                with path.open('rb') as fh:
+                    st.download_button(
+                        'Download PNG',
+                        data=fh.read(),
+                        file_name=path.name,
+                        mime='image/png',
+                        key=f'v11_population_{i}_{path.name}',
+                    )
+            else:
+                st.warning(f'Missing file: `{path.relative_to(APP_DIR)}`')
+
+
+def render_candidate_summary_pdfs() -> None:
+    st.markdown('### Candidate summary documents')
+    st.caption('Global diagnostic PDF panels for the v9 new-candidate catalogues.')
+    for i, item in enumerate(CANDIDATE_SUMMARY_PDFS):
+        path = CANDIDATE_SUMMARY_DIR / item['filename']
+        with st.expander(item['title'], expanded=(i == 0)):
+            st.caption(item['caption'])
+            if path.exists():
+                size_mb = path.stat().st_size / 1024**2
+                st.write(f'File available — `{size_mb:.1f} MB`')
+                with path.open('rb') as fh:
                     st.download_button(
                         'Download PDF',
                         data=fh.read(),
-                        file_name=pdf_path.name,
+                        file_name=path.name,
                         mime='application/pdf',
-                        key=f'{key_prefix}_pdf_{pdf_path.name}',
+                        key=f'download_summary_pdf_{i}',
                     )
-                    
-                        with buttons[1]:
-                            if csv_path is not None and csv_path.exists():
-                                with csv_path.open('rb') as fh:
-                    st.download_button(
-                        'Download CSV',
-                        data=fh.read(),
-                        file_name=csv_path.name,
-                        mime='text/csv',
-                        key=f'{key_prefix}_csv_{csv_path.name}',
-                    )
-                    
-                    
-                    
-                    def _first_numeric_column(df: pd.DataFrame, candidates: list[str]) -> pd.Series:
-                        for c in candidates:
-                            if c in df.columns:
-                                s = pd.to_numeric(df[c], errors='coerce')
-                                if s.notna().any():
-                    return s
-                        return pd.Series(np.nan, index=df.index, dtype=float)
-                    
-                    
-                    def render_bb86_vs_new247_statistics(hi_df: pd.DataFrame, candidates_df: pd.DataFrame) -> None:
-                        st.subheader('BB86 141 holes vs 247 blind-detection candidates')
-                        st.caption('Comparison of sizes, velocities and axis ratios. Histograms are normalized in percent so the 141 and 247 populations can be compared directly.')
-                    
-                        if hi_df.empty or candidates_df.empty:
-                            st.info('Missing BB86 or candidate catalogue.')
-                            return
-                    
-                        bb = pd.DataFrame({
-                            'population': 'BB86 known holes',
-                            'Maj_pc': _first_numeric_column(hi_df, ['cg2d__Maj_growth_pc', 'joint__Maj_best_pc', 'Maj']),
-                            'Min_pc': _first_numeric_column(hi_df, ['cg2d__Min_growth_pc', 'joint__Min_best_pc', 'Min']),
-                            'v_center_kms': _first_numeric_column(hi_df, ['cg2d__hrv_kms', 'joint__HRV_used_kms', 'HRV', 'v_center_kms']),
-                        })
-                    
-                        cand = pd.DataFrame({
-                            'population': 'New + potential candidates',
-                            'Maj_pc': _first_numeric_column(candidates_df, ['v11_final_Maj_pc', 'Maj_pc', 'final_Maj_pc']),
-                            'Min_pc': _first_numeric_column(candidates_df, ['v11_final_Min_pc', 'Min_pc', 'final_Min_pc']),
-                            'v_center_kms': _first_numeric_column(candidates_df, ['v11_final_v_center_kms', 'v_center_kms', 'final_v_center_kms']),
-                        })
-                    
-                        comp = pd.concat([bb, cand], ignore_index=True)
-                        comp['D_eq_pc'] = np.sqrt(comp['Maj_pc'] * comp['Min_pc'])
-                        comp['axis_ratio_a_over_b'] = comp['Maj_pc'] / comp['Min_pc']
-                    
-                        metrics = [
-                            ('Maj_pc', 'Major diameter [pc]'),
-                            ('Min_pc', 'Minor diameter [pc]'),
-                            ('D_eq_pc', 'Equivalent diameter sqrt(Maj×Min) [pc]'),
-                            ('axis_ratio_a_over_b', 'Axis ratio Maj/Min'),
-                            ('v_center_kms', 'Central velocity [km/s]'),
-                        ]
-                    
-                        rows = []
-                        for pop, g in comp.groupby('population'):
-                            for col, label in metrics:
-                                s = pd.to_numeric(g[col], errors='coerce').dropna()
-                                if s.empty:
-                    continue
-                                rows.append({
-                    'population': pop,
-                    'quantity': label,
-                    'N': int(len(s)),
-                    'median': float(s.median()),
-                    'p16': float(s.quantile(0.16)),
-                    'p84': float(s.quantile(0.84)),
-                    'min': float(s.min()),
-                    'max': float(s.max()),
-                                })
-                    
-                        st.dataframe(pd.DataFrame(rows), width='stretch', hide_index=True)
-                    
-                        for i in range(0, len(metrics), 2):
-                            cols = st.columns(2)
-                            for j, (col, label) in enumerate(metrics[i:i + 2]):
-                                with cols[j]:
-                    fig = go.Figure()
-                    for pop in ['BB86 known holes', 'New + potential candidates']:
-                        s = comp.loc[comp['population'].eq(pop), col].dropna()
-                        fig.add_trace(go.Histogram(
-                            x=s,
-                            name=f'{pop} (N={len(s)})',
-                            histnorm='percent',
-                            opacity=0.65,
-                        ))
-                    fig.update_layout(
-                        title=label,
-                        barmode='overlay',
-                        xaxis_title=label,
-                        yaxis_title='Percent of population',
-                        height=390,
-                        margin=dict(l=40, r=20, t=55, b=45),
-                        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='left', x=0.0),
-                    )
-                    st.image(
-                        "figures/final/bb86_vs_new247_2dcg/bb86_2dcg_vs_new247_2dcg_histograms_samebins_orange.png",
-                        use_container_width=True,
-                    )
-                    st.markdown(
-                        "[Open PDF](figures/final/bb86_vs_new247_2dcg/bb86_2dcg_vs_new247_2dcg_histograms_samebins_orange.pdf)"
-                    )
+                render_pdf_inline(path, height=680)
+            else:
+                st.info(f'PDF not found: `{path.relative_to(APP_DIR)}`')
+
+
+def transform_background_extent(meta: dict) -> dict:
+    x_min = float(meta['x_min'])
+    x_max = float(meta['x_max'])
+    y_min = float(meta['y_min'])
+    y_max = float(meta['y_max'])
+    if DISPLAY_FLIP_X:
+        x0 = -x_max
+        x1 = -x_min
+    else:
+        x0 = x_min
+        x1 = x_max
+    out = {'x_min': float(min(x0, x1)), 'x_max': float(max(x0, x1)), 'y_min': y_min, 'y_max': y_max}
+    out['sizex'] = out['x_max'] - out['x_min']
+    out['sizey'] = out['y_max'] - out['y_min']
+    return out
+
+
+def resolve_video_path(row: pd.Series) -> Path | None:
+    raw = str(row.get('video_path', '')).strip()
+    if not raw or raw.lower() in {'nan', 'none'}:
+        return None
+    path = Path(raw)
+    if path.is_absolute():
+        path = Path('videos') / path.name
+    return APP_DIR / path
+
+
+def resolve_video_url(row: pd.Series) -> str:
+    raw = str(row.get('video_url', '')).strip()
+    if not raw or raw.lower() in {'nan', 'none'}:
+        return ''
+    return raw
+
+
+def resolve_optional_path(row: pd.Series, column: str) -> Path | None:
+    raw = str(row.get(column, '')).strip()
+    if not raw or raw.lower() in {'nan', 'none'}:
+        return None
+    path = Path(raw)
+    if path.is_absolute():
+        path = Path(path.name)
+    return APP_DIR / path
+
+
+def render_optional_png(row: pd.Series, title: str, column: str, missing_message: str) -> None:
+    st.markdown(f'### {title}')
+    path = resolve_optional_path(row, column)
+    if path is not None and path.exists():
+        st.image(str(path), width='stretch')
+    else:
+        st.info(missing_message)
+
+
+def _row_value(row: pd.Series, column: str | None) -> str:
+    if column is None or column not in row.index:
+        return ''
+    return value_to_text(row[column])
+
+
+def build_refit_table(row: pd.Series) -> pd.DataFrame:
+    specs = [
+        ('Maj [pc]', 'joint__Maj_best_pc', 'cg2d__Maj_growth_pc'),
+        ('Min [pc]', 'joint__Min_best_pc', 'cg2d__Min_growth_pc'),
+        ('PA [deg]', 'joint__PA_astro_best_deg', 'cg2d__PA_geometry_deg'),
+        ('HRV [km/s]', 'joint__HRV_used_kms', 'cg2d__hrv_kms'),
+        ('N channels', 'joint__nch_used', 'cg2d__nch_best'),
+        ('v min [km/s]', None, 'cg2d__vel_lo_kms'),
+        ('v max [km/s]', None, 'cg2d__vel_hi_kms'),
+        ('dx [arcsec]', 'joint__dx_best_arcsec', None),
+        ('dy [arcsec]', 'joint__dy_best_arcsec', None),
+        ('dr [arcsec]', 'joint__dr_best_arcsec', None),
+        ('contrast base', 'joint__contrast_base', None),
+        ('contrast best', 'joint__contrast_best', None),
+        ('ΔI/σ base', 'joint__delta_I_sn_base', None),
+        ('ΔI/σ best', 'joint__delta_I_sn_best', 'cg2d__delta_I_sn'),
+        ('median Nbeam center', None, 'cg2d__med_Nbeam_center'),
+        ('median Nbeam ring', None, 'cg2d__med_Nbeam_ring'),
+        ('major r50 [arcsec]', None, 'cg2d__major_r50_deficit_arcsec'),
+        ('major r80 [arcsec]', None, 'cg2d__major_r80_deficit_arcsec'),
+        ('minor r50 [arcsec]', None, 'cg2d__minor_r50_deficit_arcsec'),
+        ('minor r80 [arcsec]', None, 'cg2d__minor_r80_deficit_arcsec'),
+        ('major growth score', None, 'cg2d__major_growth_score'),
+        ('minor growth score', None, 'cg2d__minor_growth_score'),
+        ('status / source', 'joint__status', 'cg2d__major_source'),
+    ]
+    rows = []
+    for parameter, joint_col, cg2d_col in specs:
+        joint_val = _row_value(row, joint_col)
+        cg2d_val = _row_value(row, cg2d_col)
+        if joint_val or cg2d_val:
+            rows.append({'parameter': parameter, 'joint_contrast_refit': joint_val, '2DCG': cg2d_val})
+    return pd.DataFrame(rows)
+
+
+def hi_size_pc(row: pd.Series) -> tuple[float, float]:
+    maj_candidates = ['cg2d__Maj_growth_pc', 'joint__Maj_best_pc', 'Maj']
+    min_candidates = ['cg2d__Min_growth_pc', 'joint__Min_best_pc', 'Min']
+    maj = next((numeric(row, c) for c in maj_candidates if np.isfinite(numeric(row, c)) and numeric(row, c) > 0), float('nan'))
+    minu = next((numeric(row, c) for c in min_candidates if np.isfinite(numeric(row, c)) and numeric(row, c) > 0), float('nan'))
+    return maj, minu
+
+
+def hi_radius_arcmin(row: pd.Series) -> float:
+    maj, minu = hi_size_pc(row)
+    if np.isfinite(maj) and np.isfinite(minu) and maj > 0 and minu > 0:
+        return 0.5 * math.sqrt(maj * minu) / PC_PER_ARCMIN
+    if np.isfinite(maj) and maj > 0:
+        return 0.5 * maj / PC_PER_ARCMIN
+    return 1.0
+
+
+def selected_hi_geometry(row: pd.Series) -> dict:
+    # BB86 rows store sizes in pc. New-candidate rows may store angular sizes directly.
+    major_arcsec = numeric(row, 'major_arcsec')
+    minor_arcsec = numeric(row, 'minor_arcsec')
+    if np.isfinite(major_arcsec) and major_arcsec > 0:
+        a = 0.5 * major_arcsec / 60.0
+        b = 0.5 * minor_arcsec / 60.0 if np.isfinite(minor_arcsec) and minor_arcsec > 0 else a
+        r_eq = math.sqrt(max(a, 1e-9) * max(b, 1e-9))
+    else:
+        maj, minu = hi_size_pc(row)
+        if not np.isfinite(maj) or maj <= 0:
+            maj = numeric(row, 'Maj')
+        if not np.isfinite(minu) or minu <= 0:
+            minu = numeric(row, 'Min')
+        a = 0.5 * maj / PC_PER_ARCMIN if np.isfinite(maj) and maj > 0 else hi_radius_arcmin(row)
+        b = 0.5 * minu / PC_PER_ARCMIN if np.isfinite(minu) and minu > 0 else hi_radius_arcmin(row)
+        r_eq = hi_radius_arcmin(row)
+    pa = numeric(row, 'cg2d__PA_geometry_deg')
+    if not np.isfinite(pa):
+        pa = numeric(row, 'joint__PA_astro_best_deg')
+    if not np.isfinite(pa):
+        pa = numeric(row, 'PA_astro_deg')
+    if not np.isfinite(pa):
+        pa = numeric(row, 'pa_deg')
+    if not np.isfinite(pa):
+        pa = numeric(row, 'PA')
+    if not np.isfinite(pa):
+        pa = 0.0
+    return {'a': a, 'b': b, 'pa': pa, 'r_eq': r_eq}
+
+
+def ellipse_points(cx: float, cy: float, a: float, b: float, pa_deg: float, n: int = 181) -> tuple[np.ndarray, np.ndarray]:
+    t = np.linspace(0.0, 2.0 * np.pi, n)
+    pa = np.deg2rad(pa_deg)
+    # PA measured from North toward East in the native x=East, y=North plane.
+    x = cx + a * np.cos(t) * np.sin(pa) + b * np.sin(t) * np.sin(pa + np.pi / 2.0)
+    y = cy + a * np.cos(t) * np.cos(pa) + b * np.sin(t) * np.cos(pa + np.pi / 2.0)
+    if DISPLAY_FLIP_X:
+        x = -x
+    return x, y
+
+
+def circle_points(cx: float, cy: float, radius: float, n: int = 181) -> tuple[np.ndarray, np.ndarray]:
+    t = np.linspace(0.0, 2.0 * np.pi, n)
+    x = cx + radius * np.cos(t)
+    y = cy + radius * np.sin(t)
+    if DISPLAY_FLIP_X:
+        x = -x
+    return x, y
+
+
+def nearest_context_tables(row: pd.Series, objects_df: pd.DataFrame, max_radius_factor: float = 3.0) -> tuple[pd.DataFrame, pd.DataFrame]:
+    cx = numeric(row, 'x_arcmin')
+    cy = numeric(row, 'y_arcmin')
+    geom = selected_hi_geometry(row)
+    r = geom.get('r_eq', float('nan'))
+    if not np.isfinite(cx) or not np.isfinite(cy) or not np.isfinite(r) or r <= 0:
+        return pd.DataFrame(), pd.DataFrame()
+
+    # Context layers only. H I holes and H I candidates are the selected structures;
+    # UV/Hα/CO/IR/X-ray remain environmental tracers around them.
+    context_tracers = ['UV', 'Hα', 'Dust - HELGA', 'CO', 'IR', 'X-ray']
+    obj = objects_df.loc[objects_df['tracer'].isin(context_tracers)].copy()
+    if obj.empty:
+        return pd.DataFrame(), pd.DataFrame()
+
+    obj['distance_arcmin'] = np.sqrt((obj['x_arcmin'] - cx) ** 2 + (obj['y_arcmin'] - cy) ** 2)
+    obj['distance_R'] = obj['distance_arcmin'] / r
+    near = obj.loc[obj['distance_R'] <= max_radius_factor].copy().sort_values(['distance_R', 'tracer'])
+
+    rows = []
+    for tracer in context_tracers:
+        sub = obj.loc[obj['tracer'] == tracer].copy()
+        if sub.empty:
+            rows.append({'tracer': tracer, 'N ≤ 1R': 0, 'N ≤ 2R': 0, 'N ≤ 3R': 0, 'nearest': '', 'nearest distance [arcmin]': '', 'nearest distance [R]': ''})
+            continue
+        sub = sub.sort_values('distance_arcmin')
+        nearest = sub.iloc[0]
+        rows.append({
+            'tracer': tracer,
+            'N ≤ 1R': int((sub['distance_R'] <= 1.0).sum()),
+            'N ≤ 2R': int((sub['distance_R'] <= 2.0).sum()),
+            'N ≤ 3R': int((sub['distance_R'] <= 3.0).sum()),
+            'nearest': str(nearest.get('display_label', '')),
+            'nearest distance [arcmin]': f'{nearest["distance_arcmin"]:.2f}',
+            'nearest distance [R]': f'{nearest["distance_R"]:.2f}',
+        })
+    summary = pd.DataFrame(rows)
+    keep_cols = ['display_label', 'tracer', 'source_catalog', 'distance_arcmin', 'distance_R', 'x_arcmin', 'y_arcmin', 'age_myr', 'mass_msun', 'luminosity', 'notes']
+    keep_cols = [c for c in keep_cols if c in near.columns]
+    near_table = near[keep_cols].head(80).copy()
+    for _txt_col in ['display_label', 'source_catalog', 'notes', 'tracer']:
+        if _txt_col in near_table.columns:
+            near_table[_txt_col] = (
+                near_table[_txt_col]
+                .fillna('')
+                .astype(str)
+                .str.replace('not a cavity', 'context tracer', case=False, regex=False)
+                .str.replace('Not a cavity', 'context tracer', regex=False)
+            )
+    for _txt_col in ['display_label', 'source_catalog', 'notes', 'tracer']:
+        if _txt_col in near_table.columns:
+            near_table[_txt_col] = (
+                near_table[_txt_col]
+                .fillna('')
+                .astype(str)
+                .str.replace('not a cavity', 'context tracer', case=False, regex=False)
+                .str.replace('Not a cavity', 'context tracer', regex=False)
+            )
+    for _txt_col in ['display_label', 'source_catalog', 'notes', 'tracer']:
+        if _txt_col in near_table.columns:
+            near_table[_txt_col] = (
+                near_table[_txt_col]
+                .fillna('')
+                .astype(str)
+                .str.replace('not a cavity', 'context tracer', case=False, regex=False)
+                .str.replace('Not a cavity', 'context tracer', regex=False)
+            )
+    for col in ['distance_arcmin', 'distance_R']:
+        if col in near_table.columns:
+            near_table[col] = near_table[col].map(lambda v: f'{float(v):.3g}' if pd.notna(v) else '')
+    return summary, near_table
+
+
+def video_player_from_file(path: Path, height: int = 520) -> None:
+    if not path.exists():
+        st.error(f'Video file not found: {path}')
+        return
+    video_bytes = path.read_bytes()
+    video_b64 = base64.b64encode(video_bytes).decode('utf-8')
+    html = f"""
+    <video width="100%" controls preload="metadata" style="background-color: black;">
+        <source src="data:video/mp4;base64,{video_b64}" type="video/mp4">
+        Your browser cannot play this MP4 video.
+    </video>
+    """
+    components.html(html, height=height)
+    st.download_button(label='Download MP4', data=video_bytes, file_name=path.name, mime='video/mp4', width='stretch')
+
+
+def video_player_from_url(url: str, height: int = 520) -> None:
+    url = str(url).strip()
+    if not url:
+        st.error('Empty video URL.')
+        return
+    html = f"""
+    <video width="100%" controls preload="metadata" style="background-color: black;">
+        <source src="{url}" type="video/mp4">
+        Your browser cannot play this MP4 video.
+    </video>
+    <p style="font-size: 0.85rem;">
+        <a href="{url}" target="_blank" rel="noopener noreferrer">Open / download MP4</a>
+    </p>
+    """
+    components.html(html, height=height)
+
+
+def build_m31_figure(
+    df_visible: pd.DataFrame,
+    df_extent: pd.DataFrame,
+    background_png: Path,
+    meta: dict,
+    selected_hi_row: pd.Series | None,
+    show_search_rings: bool,
+) -> go.Figure:
+    fig = go.Figure()
+    has_bg = background_png.exists() and bool(meta)
+    if has_bg:
+        bg = transform_background_extent(meta)
+        fig.add_layout_image(dict(
+            source=image_file_to_data_uri(background_png), xref='x', yref='y', x=bg['x_min'], y=bg['y_max'],
+            sizex=bg['sizex'], sizey=bg['sizey'], sizing='stretch', opacity=1.0, layer='below'))
+        fig.update_xaxes(range=[bg['x_min'], bg['x_max']])
+        fig.update_yaxes(range=[bg['y_min'], bg['y_max']])
+    else:
+        xpad = 10.0
+        ypad = 10.0
+        fig.update_xaxes(range=[float(df_extent['x_plot'].min()) - xpad, float(df_extent['x_plot'].max()) + xpad])
+        fig.update_yaxes(range=[float(df_extent['y_plot'].min()) - ypad, float(df_extent['y_plot'].max()) + ypad])
+
+    for tracer in TRACER_OPTIONS:
+        sub = df_visible.loc[df_visible['tracer'] == tracer].copy()
+        if sub.empty:
+            continue
+        marker = dict(
+            size=sub['marker_size'],
+            color=TRACER_COLORS.get(tracer, 'white'),
+            opacity=0.82 if tracer != 'HI' else 0.9,
+            line=dict(width=0.6, color='white'),
+            symbol=TRACER_SYMBOLS.get(tracer, 'circle'),
+        )
+        if tracer == 'HI':
+            marker['opacity'] = 0.88
+        fig.add_trace(go.Scatter(
+            x=sub['x_plot'], y=sub['y_plot'], mode='markers', name=tracer,
+            marker=marker,
+            text=sub['display_label'],
+            customdata=sub[['object_uid', 'tracer', 'source_catalog', 'hi_seq', 'x_arcmin', 'y_arcmin', 'major_arcsec', 'minor_arcsec', 'pa_deg']].fillna('').to_numpy(),
+            hovertemplate=(
+                '%{text}<br>'
+                'Tracer=%{customdata[1]}<br>'
+                'Catalog=%{customdata[2]}<br>'
+                'X=%{customdata[4]:.2f} arcmin<br>'
+                'Y=%{customdata[5]:.2f} arcmin<br>'
+                'Major=%{customdata[6]} arcsec<br>'
+                'Minor=%{customdata[7]} arcsec<br>'
+                'PA=%{customdata[8]} deg<br>'
+                '<extra></extra>'
+            ),
+        ))
+
+    if selected_hi_row is not None:
+        cx = numeric(selected_hi_row, 'x_arcmin')
+        cy = numeric(selected_hi_row, 'y_arcmin')
+        if np.isfinite(cx) and np.isfinite(cy):
+            tracer = str(selected_hi_row.get('tracer', 'HI'))
+            is_bb86_hi = 'Seq' in selected_hi_row.index and tracer in {'HI', '', 'nan'}
+            geom = selected_hi_geometry(selected_hi_row)
+
+            if is_bb86_hi:
+                seq = int(selected_hi_row['Seq'])
+                label = f'HI {seq:03d}'
+                trace_name = 'selected H I ellipse'
+                line_color = 'red'
+                marker_color = 'red'
+                marker_symbol = 'circle-open'
+            else:
+                label = str(selected_hi_row.get('display_label', selected_hi_row.get('object_uid', 'selected object')))
+                trace_name = f'selected {tracer} ellipse'
+                line_color = TRACER_COLORS.get(tracer, 'red')
+                marker_color = line_color
+                marker_symbol = 'circle-open'
+
+            xe, ye = ellipse_points(cx, cy, geom['a'], geom['b'], geom['pa'])
+            fig.add_trace(go.Scatter(
+                x=xe, y=ye, mode='lines', name=trace_name,
+                line=dict(color=line_color, width=3), hoverinfo='skip'
+            ))
+
+            # 1R/2R/3R are drawn for any selected H I structure: BB86 holes,
+            # Koch25 new candidates, and low-confidence/potential candidates.
+            if show_search_rings:
+                for factor, dash in [(1, 'dot'), (2, 'dash'), (3, 'longdash')]:
+                    xc, yc = circle_points(cx, cy, geom['r_eq'] * factor)
+                    fig.add_trace(go.Scatter(
+                        x=xc, y=yc, mode='lines', name=f'{factor}R search ring',
+                        line=dict(color='white', width=1, dash=dash), opacity=0.65, hoverinfo='skip'
+                    ))
+
+            fig.add_trace(go.Scatter(
+                x=[-cx if DISPLAY_FLIP_X else cx], y=[cy], mode='markers+text', name='selected object', showlegend=False, marker=dict(size=21, color=marker_color, symbol=marker_symbol, line=dict(width=3.0, color=marker_color)),
+                text=[label], textposition='top center', textfont=dict(color=marker_color, size=13), hoverinfo='skip'
+            ))
+
+    x_title = 'Displayed X [arcmin] — East left / West right' if DISPLAY_FLIP_X else 'X [arcmin]'
+    fig.update_layout(
+        title='M31 — multi-tracer context map', template='plotly_dark', height=820,
+        margin=dict(l=20, r=20, t=60, b=20),
+        legend=dict(bgcolor='rgba(0,0,0,0.35)', bordercolor='rgba(255,255,255,0.25)', borderwidth=1),
+        xaxis_title=x_title, yaxis_title='Y [arcmin] — North/South', clickmode='event+select')
+    fig.update_yaxes(scaleanchor='x', scaleratio=1, showgrid=False, zeroline=False)
+    fig.update_xaxes(showgrid=False, zeroline=False)
+    return fig
+
+
+def build_local_context_figure(
+    selected_row: pd.Series,
+    objects_df: pd.DataFrame,
+    background_png: Path,
+    meta: dict,
+    show_search_rings: bool,
+    selected_tracers: list[str] | None = None,
+) -> go.Figure | None:
+    """Build an interactive 3R local zoom around the selected H I structure.
+
+    The zoom is derived from the same x/y offset system as the global M31 map.
+    It uses the same background image and marker conventions, then restricts the
+    axes to a region slightly larger than 3R.
+    """
+    cx = numeric(selected_row, 'x_arcmin')
+    cy = numeric(selected_row, 'y_arcmin')
+    geom = selected_hi_geometry(selected_row)
+    r_eq = float(geom.get('r_eq', np.nan))
+    if not (np.isfinite(cx) and np.isfinite(cy) and np.isfinite(r_eq) and r_eq > 0):
+        return None
+
+    x0 = -cx if DISPLAY_FLIP_X else cx
+    y0 = cy
+    half_size = 3.6 * r_eq
+
+    # Local zoom always shows environmental tracers, plus H I structures if the
+    # user has them enabled in the global map. This keeps the plot aligned with
+    # the near-object table without forcing every global layer to be visible.
+    context_tracers = ['UV', 'Hα', 'Dust - HELGA', 'CO', 'IR', 'X-ray']
+    hi_structure_tracers = ['HI', 'Koch25 new HI candidate', 'Potential new HI Candidate']
+    chosen = list(selected_tracers or [])
+    local_tracers = []
+    for tracer in context_tracers + hi_structure_tracers + chosen:
+        if tracer not in local_tracers:
+            local_tracers.append(tracer)
+
+    local = objects_df.loc[objects_df['tracer'].isin(local_tracers)].copy()
+    if not local.empty:
+        local = local.loc[
+            np.isfinite(local['x_plot'])
+            & np.isfinite(local['y_plot'])
+            & (local['x_plot'] >= x0 - half_size)
+            & (local['x_plot'] <= x0 + half_size)
+            & (local['y_plot'] >= y0 - half_size)
+            & (local['y_plot'] <= y0 + half_size)
+        ].copy()
+
+    title = str(selected_row.get('display_label', selected_row.get('object_label', selected_row.get('Seq_str', 'selected object'))))
+    if not title or title.lower() in {'nan', 'none'}:
+        title = 'selected object'
+
+    fig = build_m31_figure(
+        df_visible=local,
+        df_extent=objects_df,
+        background_png=background_png,
+        meta=meta,
+        selected_hi_row=selected_row,
+        show_search_rings=show_search_rings,
+    )
+    fig.update_xaxes(range=[x0 - half_size, x0 + half_size])
+    fig.update_yaxes(range=[y0 - half_size, y0 + half_size])
+    # The Streamlit section title above the chart carries the label.
+    # Keep the Plotly title empty so it cannot overlap the horizontal legend.
+    fig.update_layout(
+        title=None,
+        height=560,
+        margin=dict(l=20, r=20, t=82, b=20),
+        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='left', x=0.0),
+    )
+    return fig
+
+
+def get_clicked_object(event) -> dict | None:
+    points = []
+    try:
+        points = event.selection.points
+    except Exception:
+        try:
+            points = event['selection']['points']
+        except Exception:
+            points = []
+    if not points:
+        return None
+    p = points[0]
+    custom = p.get('customdata') if hasattr(p, 'get') else None
+    if custom is None or len(custom) < 4:
+        return None
+    return {'object_uid': str(custom[0]), 'tracer': str(custom[1]), 'source_catalog': str(custom[2]), 'hi_seq': custom[3]}
+
+
+def build_external_object_table(obj_row: pd.Series) -> pd.DataFrame:
+    cols = [
+        ('tracer', 'tracer'), ('catalog', 'source_catalog'), ('label', 'display_label'),
+        ('RA [deg]', 'ra_deg'), ('Dec [deg]', 'dec_deg'), ('X [arcmin]', 'x_arcmin'), ('Y [arcmin]', 'y_arcmin'),
+        ('major [arcsec]', 'major_arcsec'), ('minor [arcsec]', 'minor_arcsec'), ('PA [deg]', 'pa_deg'),
+        ('flux', 'flux'), ('luminosity', 'luminosity'), ('area [pc²]', 'area_pc2'),
+        ('age [Myr]', 'age_myr'), ('mass [M☉]', 'mass_msun'), ('notes', 'notes'),
+    ]
+    rows = []
+    for label, col in cols:
+        if col in obj_row.index:
+            val = value_to_text(obj_row[col])
+            if val:
+                rows.append({'parameter': label, 'value': val})
+    return pd.DataFrame(rows)
+
+
+
+@st.cache_data(show_spinner=False)
+def load_new_candidates_catalog(path: Path) -> pd.DataFrame:
+    if not path.exists():
+        return pd.DataFrame()
+    df = pd.read_csv(path)
+    if df.empty:
+        return df
+    for col in ['object_uid', 'tracer', 'source_catalog', 'display_label', 'validation_png', 'video_url', 'video_release_url', 'video_path', 'video_name', 'video_release_tag', 'v11_diagnostic_png', 'v11_plot_class', 'v11_passes_2dcg']:
+        if col not in df.columns:
+            df[col] = ''
+        df[col] = df[col].fillna('').astype(str)
+    for col in ['candidate_id', 'new_candidate_id', 'ra_deg', 'dec_deg', 'x_arcmin', 'y_arcmin', 'major_arcsec', 'minor_arcsec', 'pa_deg', 'v_center_kms', 'Maj_pc', 'Min_pc', 'PA_astro_deg', 'v9_final_score', 'v11_source_candidate_id', 'v11_match_sep_arcsec', 'v11_joint_2dcg_score', 'v11_final_Maj_pc', 'v11_final_Min_pc', 'v11_final_PA_astro_deg', 'v11_final_v_center_kms']:
+        if col not in df.columns:
+            df[col] = np.nan
+        df[col] = pd.to_numeric(df[col], errors='coerce')
+    df['x_plot'] = -df['x_arcmin'] if DISPLAY_FLIP_X else df['x_arcmin']
+    df['y_plot'] = df['y_arcmin']
+    return df
+
+
+def resolve_catalog_path(row: pd.Series, column: str) -> Path | None:
+    raw = str(row.get(column, '')).strip()
+    if not raw or raw.lower() in {'nan', 'none'}:
+        return None
+    path = Path(raw)
+    if path.is_absolute():
+        return path
+    return APP_DIR / path
+
+
+def build_candidate_table(row: pd.Series) -> pd.DataFrame:
+    cols = [
+        ('candidate ID', 'candidate_id'),
+        ('RA [deg]', 'ra_deg'), ('Dec [deg]', 'dec_deg'),
+        ('offset East/West from M31 centre [arcmin]', 'x_arcmin'),
+        ('offset North/South from M31 centre [arcmin]', 'y_arcmin'),
+        ('v centre [km/s]', 'v_center_kms'),
+        ('Maj [pc]', 'Maj_pc'), ('Min [pc]', 'Min_pc'), ('PA [deg]', 'PA_astro_deg'),
+        ('major [arcsec]', 'major_arcsec'), ('minor [arcsec]', 'minor_arcsec'),
+        ('2DCG source ID', 'v11_source_candidate_id'),
+        ('2DCG match separation [arcsec]', 'v11_match_sep_arcsec'),
+        ('2DCG refit Maj [pc]', 'v11_final_Maj_pc'),
+        ('2DCG refit Min [pc]', 'v11_final_Min_pc'),
+        ('2DCG refit PA [deg]', 'v11_final_PA_astro_deg'),
+        ('2DCG refit v centre [km/s]', 'v11_final_v_center_kms'),
+        ('2DCG class', 'v11_plot_class'),
+        ('passes 2DCG', 'v11_passes_2dcg'),
+    ]
+    rows = []
+    for label, col in cols:
+        if col in row.index:
+            val = value_to_text(row[col])
+            if val:
+                rows.append({'parameter': label, 'value': val})
+    return pd.DataFrame(rows)
+
+
+
+
+
+
+
+def render_stat_figure_card(title: str, caption: str, png_rel: str | None = None, pdf_rel: str | None = None, csv_rel: str | None = None, key_prefix: str = '') -> None:
+    st.markdown(f'#### {title}')
+    if caption:
+        st.caption(caption)
+
+    png_path = APP_DIR / png_rel if png_rel else None
+    pdf_path = APP_DIR / pdf_rel if pdf_rel else None
+    csv_path = APP_DIR / csv_rel if csv_rel else None
+
+    if png_path is not None and png_path.exists():
+        st.image(str(png_path), width='stretch')
+        st.caption('PNG available for this figure.')
+    elif png_rel:
+        st.warning(f'Missing PNG: `{png_rel}`')
+
+    buttons = st.columns(2)
+
+    with buttons[0]:
+        if pdf_path is not None and pdf_path.exists():
+            with pdf_path.open('rb') as fh:
+                st.download_button(
+                    'Download PDF',
+                    data=fh.read(),
+                    file_name=pdf_path.name,
+                    mime='application/pdf',
+                    key=f'{key_prefix}_pdf_{pdf_path.name}',
+                )
+
+    with buttons[1]:
+        if csv_path is not None and csv_path.exists():
+            with csv_path.open('rb') as fh:
+                st.download_button(
+                    'Download CSV',
+                    data=fh.read(),
+                    file_name=csv_path.name,
+                    mime='text/csv',
+                    key=f'{key_prefix}_csv_{csv_path.name}',
+                )
+
+
+
+def _first_numeric_column(df: pd.DataFrame, candidates: list[str]) -> pd.Series:
+    for c in candidates:
+        if c in df.columns:
+            s = pd.to_numeric(df[c], errors='coerce')
+            if s.notna().any():
+                return s
+    return pd.Series(np.nan, index=df.index, dtype=float)
+
+
+def render_bb86_vs_new247_statistics(hi_df: pd.DataFrame, candidates_df: pd.DataFrame) -> None:
+    st.subheader('BB86 2DCG refit vs new candidate 2DCG refit')
+    st.caption(
+        'Comparison based on the 2DCG refit geometry: BB86 known H I holes '
+        'versus the full 247 blind-detection candidate population.'
+    )
+
+    png_rel = 'figures/final/bb86_vs_new247_2dcg/bb86_2dcg_vs_new247_2dcg_histograms_samebins_orange.png'
+    pdf_rel = 'figures/final/bb86_vs_new247_2dcg/bb86_2dcg_vs_new247_2dcg_histograms_samebins_orange.pdf'
+
+    png_path = APP_DIR / png_rel
+    pdf_path = APP_DIR / pdf_rel
+
+    with st.container(border=True):
+        if png_path.exists():
+            st.image(str(png_path), width='stretch')
+        else:
+            st.warning(f'Missing PNG: `{png_rel}`')
+
+        if pdf_path.exists():
+            with pdf_path.open('rb') as fh:
+                st.download_button(
+                    'Download PDF',
+                    data=fh.read(),
+                    file_name=pdf_path.name,
+                    mime='application/pdf',
+                    key='bb86_vs_new247_2dcg_samebins_pdf',
+                )
+        else:
+            st.info(f'PDF not found: `{pdf_rel}`')
+
 
 def render_global_statistics() -> None:
     st.subheader('Statistiques globales')
