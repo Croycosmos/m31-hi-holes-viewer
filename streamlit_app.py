@@ -8,6 +8,16 @@ import math
 import numpy as np
 import pandas as pd
 import streamlit as st
+
+_RENDERED_ONCE_THIS_RUN = set()
+
+def _claim_render_once(key: str) -> bool:
+    """Return True once per Streamlit script execution."""
+    if key in _RENDERED_ONCE_THIS_RUN:
+        return False
+    _RENDERED_ONCE_THIS_RUN.add(key)
+    return True
+
 import streamlit.components.v1 as components
 import plotly.graph_objects as go
 
