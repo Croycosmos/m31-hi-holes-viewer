@@ -126,6 +126,44 @@ def value_to_text(value) -> str:
     return str(value)
 
 
+def candidate_selector_sort_key(df: pd.DataFrame) -> pd.Series:
+    """Numeric candidate id used only to sort selection menus."""
+    if df.empty:
+        return pd.Series(dtype=float)
+
+    for col in [
+        'new_candidate_id',
+        'candidate_id',
+        'new_hi_candidate_id',
+        'id',
+    ]:
+        if col in df.columns:
+            vals = pd.to_numeric(df[col], errors='coerce')
+            if vals.notna().any():
+                return vals
+
+    labels = df.get('display_label', pd.Series('', index=df.index)).astype(str)
+    return pd.to_numeric(labels.str.extract(r'(\d+)')[0], errors='coerce')
+
+
+def sort_candidate_selector_rows(df: pd.DataFrame) -> pd.DataFrame:
+    """Sort new/potential H I candidates numerically for selectbox menus."""
+    if df.empty:
+        return df
+
+    out = df.copy()
+    out['_selector_sort_id'] = candidate_selector_sort_key(out)
+
+    sort_cols = ['_selector_sort_id']
+    if 'display_label' in out.columns:
+        sort_cols.append('display_label')
+    elif 'object_uid' in out.columns:
+        sort_cols.append('object_uid')
+
+    out = out.sort_values(sort_cols, na_position='last')
+    return out.drop(columns=['_selector_sort_id']).reset_index(drop=True)
+
+
 def numeric(row: pd.Series, col: str | None) -> float:
     if col is None or col not in row.index:
         return float('nan')
@@ -133,6 +171,7 @@ def numeric(row: pd.Series, col: str | None) -> float:
         return float(row[col])
     except Exception:
         return float('nan')
+
 
 
 @st.cache_data(show_spinner=False)
@@ -1064,6 +1103,7 @@ def render_multitracer_object_selector(hi_df: pd.DataFrame, candidates_df: pd.Da
         return source_type, selected_hi_row, None, selected_hi_row
 
     sub = candidates_df.loc[candidates_df['tracer'].eq(source_type)].copy() if not candidates_df.empty else pd.DataFrame()
+    sub = sort_candidate_selector_rows(sub)
     if sub.empty:
         st.warning(f'No row found for {source_type}.')
         return source_type, None, None, None
@@ -1396,6 +1436,14 @@ def render_context_tables_and_zoom(row: pd.Series, objects_df: pd.DataFrame, sel
     )
     if local_fig is not None:
         st.markdown(f'### Local 3R zoom — {selected_object_title(row, str(row.get("tracer", "")))}')
+        st.plotly_chart(
+            local_fig,
+            key=f'local_3r_zoom_{key_suffix}',
+            config={'responsive': True},
+            width='stretch',
+        )
+    else:
+        st.info('Local 3R zoom could not be generated for this selected object.')
 
 def render_object_browser(hi_df: pd.DataFrame, candidates_df: pd.DataFrame) -> None:
     st.subheader('Object browser')
@@ -1555,6 +1603,7 @@ with tab_detection:
         selected_object_row = selected_hi_row
     else:
         sub = candidates_df.loc[candidates_df['tracer'] == selected_source_type].copy() if not candidates_df.empty else pd.DataFrame()
+        sub = sort_candidate_selector_rows(sub)
         if sub.empty:
             st.warning(f'No rows for {selected_source_type}.')
         else:
