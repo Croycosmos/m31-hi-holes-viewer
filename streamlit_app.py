@@ -955,8 +955,13 @@ def render_bb86_vs_new247_statistics(hi_df: pd.DataFrame, candidates_df: pd.Data
                     margin=dict(l=40, r=20, t=55, b=45),
                     legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='left', x=0.0),
                 )
-                st.plotly_chart(fig, width='stretch', config={'responsive': True})
-
+                st.image(
+                    "figures/final/bb86_vs_new247_2dcg/bb86_2dcg_vs_new247_2dcg_histograms_samebins_orange.png",
+                    use_container_width=True,
+                )
+                st.markdown(
+                    "[Open PDF](figures/final/bb86_vs_new247_2dcg/bb86_2dcg_vs_new247_2dcg_histograms_samebins_orange.pdf)"
+                )
 
 def render_global_statistics() -> None:
     st.subheader('Statistiques globales')
