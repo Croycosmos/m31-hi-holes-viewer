@@ -3,218 +3,130 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-APP = Path(".")
+OUT = Path("figures/final/bb86_vs_new247_2dcg")
+OUT.mkdir(parents=True, exist_ok=True)
 
-BB86_PATH = APP / "figures/final/bb86_2dcg_histograms/bb86_2dcg_joint_histogram_input_with_derived_columns.csv"
-NEW_PATH = APP / "figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv"
+BB86_PATH = Path("data/holes_catalog_streamlit.csv")
+NEW_POP_PATH = Path("figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv")
 
-OUT_DIR = APP / "figures/final/bb86_vs_new247_2dcg"
-OUT_DIR.mkdir(parents=True, exist_ok=True)
+bb86 = pd.read_csv(BB86_PATH)
+new = pd.read_csv(NEW_POP_PATH)
 
-OUT_PNG = OUT_DIR / "bb86_2dcg_vs_new247_2dcg_histograms.png"
-OUT_PDF = OUT_DIR / "bb86_2dcg_vs_new247_2dcg_histograms.pdf"
-OUT_CSV = OUT_DIR / "bb86_2dcg_vs_new247_2dcg_summary.csv"
+def first_numeric(df, candidates, required=True):
+    for c in candidates:
+        if c in df.columns:
+            s = pd.to_numeric(df[c], errors="coerce")
+            if s.notna().sum() > 0:
+                return s
+    if required:
+        raise RuntimeError(f"None of these columns found with numeric values: {candidates}")
+    return pd.Series(np.nan, index=df.index)
 
+# BB86: use 2DCG/refit quantities, not the original BB86 table values.
+bb86_maj = first_numeric(bb86, ["cg2d__Maj_growth_pc", "joint__Maj_best_pc"])
+bb86_min = first_numeric(bb86, ["cg2d__Min_growth_pc", "joint__Min_best_pc"])
+bb86_vel = first_numeric(bb86, ["cg2d__hrv_kms", "joint__HRV_used_kms", "HRV"])
+bb86_pa  = first_numeric(bb86, ["cg2d__PA_geometry_deg", "joint__PA_astro_best_deg", "PA"])
 
-def first_col(df, names):
-    for name in names:
-        if name in df.columns:
-            return name
-    return None
+# New candidates: use the merged 2DCG refit population values.
+new_maj = first_numeric(new, ["final_Maj_pc", "Maj_pc", "initial_Maj_pc"])
+new_min = first_numeric(new, ["final_Min_pc", "Min_pc", "initial_Min_pc"])
+new_vel = first_numeric(new, ["final_v_center_kms", "trial_v_center_kms", "initial_v_center_kms"])
+new_pa  = first_numeric(new, ["final_PA_astro_deg", "PA_astro_deg", "initial_PA_astro_deg"])
 
+bb86_eq = np.sqrt(bb86_maj * bb86_min)
+new_eq = np.sqrt(new_maj * new_min)
 
-def num(df, names):
-    col = first_col(df, names)
-    if col is None:
-        return pd.Series(np.nan, index=df.index, dtype=float)
-    return pd.to_numeric(df[col], errors="coerce")
+bb86_q = bb86_min / bb86_maj
+new_q = new_min / new_maj
 
-
-def normalise_pa_0_180(x):
-    return np.mod(pd.to_numeric(x, errors="coerce"), 180.0)
-
-
-def build_bb86(df):
-    out = pd.DataFrame(index=df.index)
-
-    # Strict: prefer explicit 2DCG columns when they exist.
-    out["Maj_pc"] = num(df, ["cg2d_Maj_pc", "Maj_growth_pc", "Maj_pc"])
-    out["Min_pc"] = num(df, ["cg2d_Min_pc", "Min_growth_pc", "Min_pc"])
-    out["PA_deg"] = num(df, ["cg2d_PA_astro_deg", "PA_geometry_deg", "PA_astro_deg"])
-    out["v_center_kms"] = num(df, ["cg2d_v_center_kms", "hrv_kms", "v_center_kms"])
-
-    if "geometry_source" in df.columns:
-        out["geometry_source"] = df["geometry_source"].astype(str)
-        # Do not include rows that only fall back to the original BB86 table.
-        keep = out["geometry_source"].str.contains("CumulativeGrowth2D|2DCG|joint", case=False, na=False)
-        out = out.loc[keep].copy()
-    else:
-        out["geometry_source"] = "2DCG/refit"
-
-    out["sample"] = "BB86 2DCG/refit"
-    return clean_geometry(out)
-
-
-def build_new247(df):
-    out = pd.DataFrame(index=df.index)
-    out["Maj_pc"] = num(df, ["final_Maj_pc", "Maj_pc"])
-    out["Min_pc"] = num(df, ["final_Min_pc", "Min_pc"])
-    out["PA_deg"] = num(df, ["final_PA_astro_deg", "PA_astro_deg"])
-    out["v_center_kms"] = num(df, ["final_v_center_kms", "v_center_kms", "trial_v_center_kms"])
-    out["geometry_source"] = "2DCG refit population"
-    out["sample"] = "New candidates 2DCG"
-    return clean_geometry(out)
-
-
-def clean_geometry(df):
-    out = df.copy()
-
-    for col in ["Maj_pc", "Min_pc", "PA_deg", "v_center_kms"]:
-        out[col] = pd.to_numeric(out[col], errors="coerce")
-
-    bad = (out["Maj_pc"] <= 0) | (out["Min_pc"] <= 0)
-    out.loc[bad, ["Maj_pc", "Min_pc"]] = np.nan
-
-    swap = out["Min_pc"] > out["Maj_pc"]
-    maj = out.loc[swap, "Maj_pc"].copy()
-    out.loc[swap, "Maj_pc"] = out.loc[swap, "Min_pc"]
-    out.loc[swap, "Min_pc"] = maj
-
-    out["geom_mean_pc"] = np.sqrt(out["Maj_pc"] * out["Min_pc"])
-    out["axis_ratio"] = out["Min_pc"] / out["Maj_pc"]
-    out["PA_mod_180_deg"] = normalise_pa_0_180(out["PA_deg"])
-
-    return out
-
-
-def nice_step(raw):
-    if not np.isfinite(raw) or raw <= 0:
-        return 1.0
-    base = 10 ** np.floor(np.log10(raw))
-    for m in [1, 2, 2.5, 5, 10]:
-        step = m * base
-        if raw <= step:
-            return step
-    return 10 * base
-
-
-def shared_bins(x1, x2, nbins_target=18, hard_range=None):
-    vals = np.concatenate([
-        pd.to_numeric(pd.Series(x1), errors="coerce").dropna().to_numpy(float),
-        pd.to_numeric(pd.Series(x2), errors="coerce").dropna().to_numpy(float),
-    ])
-    vals = vals[np.isfinite(vals)]
-
-    if hard_range is not None:
-        lo, hi = hard_range
-    elif len(vals) == 0:
-        lo, hi = 0.0, 1.0
-    else:
-        lo = np.nanmin(vals)
-        hi = np.nanmax(vals)
-
-    if hi <= lo:
-        hi = lo + 1.0
-
-    step = nice_step((hi - lo) / nbins_target)
-    lo = np.floor(lo / step) * step
-    hi = np.ceil(hi / step) * step
-
-    return np.arange(lo, hi + 0.5 * step, step)
-
-
-def add_hist(ax, bb, new, col, xlabel, title, bins):
-    x_bb = pd.to_numeric(bb[col], errors="coerce").dropna()
-    x_new = pd.to_numeric(new[col], errors="coerce").dropna()
-
-    ax.hist(
-        x_bb,
-        bins=bins,
-        alpha=0.62,
-        color="0.55",
-        edgecolor="black",
-        linewidth=0.45,
-        label=f"BB86 2DCG/refit, N={len(x_bb)}",
-    )
-    ax.hist(
-        x_new,
-        bins=bins,
-        alpha=0.55,
-        color="darkorange",
-        edgecolor="black",
-        linewidth=0.45,
-        label=f"New candidates 2DCG, N={len(x_new)}",
-    )
-
-    if len(x_bb):
-        ax.axvline(np.nanmedian(x_bb), color="black", linestyle="--", linewidth=1.1)
-    if len(x_new):
-        ax.axvline(np.nanmedian(x_new), color="darkorange", linestyle="--", linewidth=1.1)
-
-    ax.set_title(title)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel("Number")
-    ax.grid(alpha=0.25, linewidth=0.5)
-    ax.legend(fontsize=8)
-
-
-bb86_raw = pd.read_csv(BB86_PATH)
-new_raw = pd.read_csv(NEW_PATH)
-
-bb86 = build_bb86(bb86_raw)
-new = build_new247(new_raw)
-
-panels = [
-    ("Maj_pc", "Major axis [pc]", "Major axis"),
-    ("Min_pc", "Minor axis [pc]", "Minor axis"),
-    ("geom_mean_pc", "sqrt(Maj × Min) [pc]", "Mean geometric size"),
-    ("axis_ratio", "Minor / major axis", "Axis ratio"),
-    ("PA_mod_180_deg", "PA modulo 180° [deg]", "Position angle"),
-    ("v_center_kms", "Central velocity [km/s]", "Central velocity"),
+datasets = [
+    ("Major diameter [pc]", bb86_maj, new_maj, 40),
+    ("Minor diameter [pc]", bb86_min, new_min, 40),
+    ("Equivalent diameter [pc]", bb86_eq, new_eq, 40),
+    ("Velocity [km/s]", bb86_vel, new_vel, 40),
+    ("PA [deg]", bb86_pa, new_pa, 36),
+    ("Axis ratio b/a", bb86_q, new_q, 30),
 ]
 
-fig, axes = plt.subplots(2, 3, figsize=(15.5, 8.5), dpi=180)
+BB86_COLOR = "#4C78A8"
+NEW_COLOR = "#F58518"
+
+fig, axes = plt.subplots(2, 3, figsize=(15, 8.5))
 axes = axes.ravel()
 
-for ax, (col, xlabel, title) in zip(axes, panels):
-    if col == "axis_ratio":
-        bins = np.linspace(0.0, 1.05, 22)
-    elif col == "PA_mod_180_deg":
-        bins = np.arange(0.0, 180.0 + 15.0, 15.0)
-    elif col == "v_center_kms":
-        bins = shared_bins(bb86[col], new[col], nbins_target=18)
+summary_rows = []
+
+for ax, (label, braw, nraw, nbins) in zip(axes, datasets):
+    b = pd.to_numeric(braw, errors="coerce").replace([np.inf, -np.inf], np.nan).dropna().to_numpy(float)
+    n = pd.to_numeric(nraw, errors="coerce").replace([np.inf, -np.inf], np.nan).dropna().to_numpy(float)
+
+    if label == "Axis ratio b/a":
+        b = b[(b > 0) & (b <= 1.5)]
+        n = n[(n > 0) & (n <= 1.5)]
+    elif "diameter" in label.lower():
+        b = b[b > 0]
+        n = n[n > 0]
+
+    allv = np.concatenate([b, n])
+    allv = allv[np.isfinite(allv)]
+
+    if allv.size == 0:
+        ax.set_title(label)
+        ax.text(0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes)
+        continue
+
+    vmin = np.nanmin(allv)
+    vmax = np.nanmax(allv)
+
+    if label == "PA [deg]":
+        vmin, vmax = -90.0, 90.0
+        bins = np.linspace(vmin, vmax, nbins + 1)
+    elif label == "Axis ratio b/a":
+        vmin, vmax = 0.0, 1.1
+        bins = np.linspace(vmin, vmax, nbins + 1)
     else:
-        bins = shared_bins(bb86[col], new[col], nbins_target=18)
+        pad = 0.03 * (vmax - vmin) if vmax > vmin else 1.0
+        bins = np.linspace(vmin - pad, vmax + pad, nbins + 1)
 
-    add_hist(ax, bb86, new, col, xlabel, title, bins)
+    # Same bin edges for both populations.
+    ax.hist(b, bins=bins, histtype="stepfilled", alpha=0.22, color=BB86_COLOR, label=f"BB86 2DCG (N={len(b)})")
+    ax.hist(b, bins=bins, histtype="step", linewidth=1.8, color=BB86_COLOR)
+    ax.hist(n, bins=bins, histtype="step", linewidth=2.4, color=NEW_COLOR, label=f"New candidates 2DCG (N={len(n)})")
 
-fig.suptitle("BB86 2DCG/refit holes vs 2DCG new candidates", fontsize=15)
-fig.tight_layout(rect=[0, 0, 1, 0.94])
-fig.savefig(OUT_PNG, bbox_inches="tight")
-fig.savefig(OUT_PDF, bbox_inches="tight")
-plt.close(fig)
+    ax.axvline(np.nanmedian(b), color=BB86_COLOR, linestyle="--", linewidth=1.2)
+    ax.axvline(np.nanmedian(n), color=NEW_COLOR, linestyle="--", linewidth=1.2)
 
-rows = []
-for sample_name, df in [("BB86 2DCG/refit", bb86), ("New candidates 2DCG", new)]:
-    for col, _, _ in panels:
-        x = pd.to_numeric(df[col], errors="coerce").dropna()
-        rows.append({
-            "sample": sample_name,
-            "quantity": col,
-            "N": len(x),
-            "median": float(np.nanmedian(x)) if len(x) else np.nan,
-            "mean": float(np.nanmean(x)) if len(x) else np.nan,
-            "std": float(np.nanstd(x)) if len(x) else np.nan,
-            "min": float(np.nanmin(x)) if len(x) else np.nan,
-            "max": float(np.nanmax(x)) if len(x) else np.nan,
-        })
+    ax.set_title(label)
+    ax.set_ylabel("Count")
+    ax.grid(alpha=0.2)
+    ax.legend(fontsize=8)
 
-pd.DataFrame(rows).to_csv(OUT_CSV, index=False)
+    summary_rows.append({
+        "quantity": label,
+        "bb86_n": len(b),
+        "new_n": len(n),
+        "bb86_median": np.nanmedian(b),
+        "new_median": np.nanmedian(n),
+        "shared_bin_min": bins[0],
+        "shared_bin_max": bins[-1],
+        "shared_bin_width": bins[1] - bins[0],
+        "n_bins": len(bins) - 1,
+    })
 
-print("[saved]", OUT_PNG)
-print("[saved]", OUT_PDF)
-print("[saved]", OUT_CSV)
+fig.suptitle("BB86 2DCG refit vs new candidate 2DCG refit", fontsize=15)
+fig.tight_layout(rect=[0, 0, 1, 0.96])
+
+png = OUT / "bb86_2dcg_vs_new247_2dcg_histograms_samebins_orange.png"
+pdf = OUT / "bb86_2dcg_vs_new247_2dcg_histograms_samebins_orange.pdf"
+csv = OUT / "bb86_2dcg_vs_new247_2dcg_summary_samebins_orange.csv"
+
+fig.savefig(png, dpi=180)
+fig.savefig(pdf)
+pd.DataFrame(summary_rows).to_csv(csv, index=False)
+
+print("[saved]", png)
+print("[saved]", pdf)
+print("[saved]", csv)
 print("[BB86 rows used]", len(bb86))
 print("[New candidate rows used]", len(new))
-print("[BB86 geometry sources]")
-print(bb86["geometry_source"].value_counts(dropna=False).to_string())
