@@ -89,26 +89,24 @@ TRACER_OPTIONS = ['HI', 'Koch25 new HI candidate', 'Potential new HI Candidate',
 TRACER_COLORS = {
     'HI': 'deepskyblue',
     'Koch25 new HI candidate': 'lime',
-    'Potential new HI Candidate': 'gray',
+    'Potential new HI Candidate': 'orange',
     'UV': 'violet',
     'Hα': 'red',
-    'Dust - HELGA': 'goldenrod',
     'Dust - HELGA': 'gold',
+    'CO': 'cyan',
     'IR': 'gold',
     'X-ray': 'lime',
 }
 TRACER_SYMBOLS = {
     'HI': 'circle',
-    'Koch25 new HI candidate': 'cross',
-    'Potential new HI Candidate': 'x',
-    'UV': 'square',
-    'Hα': 'triangle-up',
-    'Dust - HELGA': 'hexagon',
-    'Dust - HELGA': 'diamond',
-    'IR': 'hexagon',
-    'X-ray': 'star',
-    'Koch25 new HI candidate': 'circle-open',
+    'Koch25 new HI candidate': 'circle',
     'Potential new HI Candidate': 'circle',
+    'UV': 'diamond',
+    'Hα': 'diamond',
+    'Dust - HELGA': 'diamond',
+    'CO': 'diamond',
+    'IR': 'diamond',
+    'X-ray': 'diamond',
 }
 
 st.set_page_config(page_title='M31 multi-tracer structures viewer', layout='wide')
@@ -488,6 +486,33 @@ def nearest_context_tables(row: pd.Series, objects_df: pd.DataFrame, max_radius_
     keep_cols = ['display_label', 'tracer', 'source_catalog', 'distance_arcmin', 'distance_R', 'x_arcmin', 'y_arcmin', 'age_myr', 'mass_msun', 'luminosity', 'notes']
     keep_cols = [c for c in keep_cols if c in near.columns]
     near_table = near[keep_cols].head(80).copy()
+    for _txt_col in ['display_label', 'source_catalog', 'notes', 'tracer']:
+        if _txt_col in near_table.columns:
+            near_table[_txt_col] = (
+                near_table[_txt_col]
+                .fillna('')
+                .astype(str)
+                .str.replace('not a cavity', 'context tracer', case=False, regex=False)
+                .str.replace('Not a cavity', 'context tracer', regex=False)
+            )
+    for _txt_col in ['display_label', 'source_catalog', 'notes', 'tracer']:
+        if _txt_col in near_table.columns:
+            near_table[_txt_col] = (
+                near_table[_txt_col]
+                .fillna('')
+                .astype(str)
+                .str.replace('not a cavity', 'context tracer', case=False, regex=False)
+                .str.replace('Not a cavity', 'context tracer', regex=False)
+            )
+    for _txt_col in ['display_label', 'source_catalog', 'notes', 'tracer']:
+        if _txt_col in near_table.columns:
+            near_table[_txt_col] = (
+                near_table[_txt_col]
+                .fillna('')
+                .astype(str)
+                .str.replace('not a cavity', 'context tracer', case=False, regex=False)
+                .str.replace('Not a cavity', 'context tracer', regex=False)
+            )
     for col in ['distance_arcmin', 'distance_R']:
         if col in near_table.columns:
             near_table[col] = near_table[col].map(lambda v: f'{float(v):.3g}' if pd.notna(v) else '')
@@ -601,7 +626,7 @@ def build_m31_figure(
                 trace_name = f'selected {tracer} ellipse'
                 line_color = TRACER_COLORS.get(tracer, 'red')
                 marker_color = line_color
-                marker_symbol = 'cross-open' if tracer == 'Koch25 new HI candidate' else 'x-open'
+                marker_symbol = 'circle-open'
 
             xe, ye = ellipse_points(cx, cy, geom['a'], geom['b'], geom['pa'])
             fig.add_trace(go.Scatter(
@@ -620,8 +645,7 @@ def build_m31_figure(
                     ))
 
             fig.add_trace(go.Scatter(
-                x=[-cx if DISPLAY_FLIP_X else cx], y=[cy], mode='markers+text', name='selected object',
-                marker=dict(size=21, color=marker_color, symbol=marker_symbol, line=dict(width=3.0, color=marker_color)),
+                x=[-cx if DISPLAY_FLIP_X else cx], y=[cy], mode='markers+text', name='selected object', showlegend=False, marker=dict(size=21, color=marker_color, symbol=marker_symbol, line=dict(width=3.0, color=marker_color)),
                 text=[label], textposition='top center', textfont=dict(color=marker_color, size=13), hoverinfo='skip'
             ))
 
@@ -776,11 +800,21 @@ def resolve_catalog_path(row: pd.Series, column: str) -> Path | None:
 
 def build_candidate_table(row: pd.Series) -> pd.DataFrame:
     cols = [
-        ('candidate ID', 'candidate_id'), ('source catalog', 'source_catalog'),
-        ('RA [deg]', 'ra_deg'), ('Dec [deg]', 'dec_deg'), ('X [arcmin]', 'x_arcmin'), ('Y [arcmin]', 'y_arcmin'),
-        ('v center [km/s]', 'v_center_kms'), ('Maj [pc]', 'Maj_pc'), ('Min [pc]', 'Min_pc'), ('PA [deg]', 'PA_astro_deg'),
-        ('major [arcsec]', 'major_arcsec'), ('minor [arcsec]', 'minor_arcsec'), ('validation score', 'v9_final_score'),
-        ('potential-status criterion', 'v9_reject_reason'), ('notes', 'notes'),
+        ('candidate ID', 'candidate_id'),
+        ('RA [deg]', 'ra_deg'), ('Dec [deg]', 'dec_deg'),
+        ('offset East/West from M31 centre [arcmin]', 'x_arcmin'),
+        ('offset North/South from M31 centre [arcmin]', 'y_arcmin'),
+        ('v centre [km/s]', 'v_center_kms'),
+        ('Maj [pc]', 'Maj_pc'), ('Min [pc]', 'Min_pc'), ('PA [deg]', 'PA_astro_deg'),
+        ('major [arcsec]', 'major_arcsec'), ('minor [arcsec]', 'minor_arcsec'),
+        ('2DCG source ID', 'v11_source_candidate_id'),
+        ('2DCG match separation [arcsec]', 'v11_match_sep_arcsec'),
+        ('2DCG refit Maj [pc]', 'v11_final_Maj_pc'),
+        ('2DCG refit Min [pc]', 'v11_final_Min_pc'),
+        ('2DCG refit PA [deg]', 'v11_final_PA_astro_deg'),
+        ('2DCG refit v centre [km/s]', 'v11_final_v_center_kms'),
+        ('2DCG class', 'v11_plot_class'),
+        ('passes 2DCG', 'v11_passes_2dcg'),
     ]
     rows = []
     for label, col in cols:
@@ -789,6 +823,7 @@ def build_candidate_table(row: pd.Series) -> pd.DataFrame:
             if val:
                 rows.append({'parameter': label, 'value': val})
     return pd.DataFrame(rows)
+
 
 
 
@@ -835,61 +870,135 @@ def render_stat_figure_card(title: str, caption: str, png_rel: str | None = None
                 )
 
 
+
+def _first_numeric_column(df: pd.DataFrame, candidates: list[str]) -> pd.Series:
+    for c in candidates:
+        if c in df.columns:
+            s = pd.to_numeric(df[c], errors='coerce')
+            if s.notna().any():
+                return s
+    return pd.Series(np.nan, index=df.index, dtype=float)
+
+
+def render_bb86_vs_new247_statistics(hi_df: pd.DataFrame, candidates_df: pd.DataFrame) -> None:
+    st.subheader('BB86 141 holes vs 247 blind-detection candidates')
+    st.caption('Comparison of sizes, velocities and axis ratios. Histograms are normalized in percent so the 141 and 247 populations can be compared directly.')
+
+    if hi_df.empty or candidates_df.empty:
+        st.info('Missing BB86 or candidate catalogue.')
+        return
+
+    bb = pd.DataFrame({
+        'population': 'BB86 known holes',
+        'Maj_pc': _first_numeric_column(hi_df, ['cg2d__Maj_growth_pc', 'joint__Maj_best_pc', 'Maj']),
+        'Min_pc': _first_numeric_column(hi_df, ['cg2d__Min_growth_pc', 'joint__Min_best_pc', 'Min']),
+        'v_center_kms': _first_numeric_column(hi_df, ['cg2d__hrv_kms', 'joint__HRV_used_kms', 'HRV', 'v_center_kms']),
+    })
+
+    cand = pd.DataFrame({
+        'population': 'New + potential candidates',
+        'Maj_pc': _first_numeric_column(candidates_df, ['v11_final_Maj_pc', 'Maj_pc', 'final_Maj_pc']),
+        'Min_pc': _first_numeric_column(candidates_df, ['v11_final_Min_pc', 'Min_pc', 'final_Min_pc']),
+        'v_center_kms': _first_numeric_column(candidates_df, ['v11_final_v_center_kms', 'v_center_kms', 'final_v_center_kms']),
+    })
+
+    comp = pd.concat([bb, cand], ignore_index=True)
+    comp['D_eq_pc'] = np.sqrt(comp['Maj_pc'] * comp['Min_pc'])
+    comp['axis_ratio_a_over_b'] = comp['Maj_pc'] / comp['Min_pc']
+
+    metrics = [
+        ('Maj_pc', 'Major diameter [pc]'),
+        ('Min_pc', 'Minor diameter [pc]'),
+        ('D_eq_pc', 'Equivalent diameter sqrt(Maj×Min) [pc]'),
+        ('axis_ratio_a_over_b', 'Axis ratio Maj/Min'),
+        ('v_center_kms', 'Central velocity [km/s]'),
+    ]
+
+    rows = []
+    for pop, g in comp.groupby('population'):
+        for col, label in metrics:
+            s = pd.to_numeric(g[col], errors='coerce').dropna()
+            if s.empty:
+                continue
+            rows.append({
+                'population': pop,
+                'quantity': label,
+                'N': int(len(s)),
+                'median': float(s.median()),
+                'p16': float(s.quantile(0.16)),
+                'p84': float(s.quantile(0.84)),
+                'min': float(s.min()),
+                'max': float(s.max()),
+            })
+
+    st.dataframe(pd.DataFrame(rows), width='stretch', hide_index=True)
+
+    for i in range(0, len(metrics), 2):
+        cols = st.columns(2)
+        for j, (col, label) in enumerate(metrics[i:i + 2]):
+            with cols[j]:
+                fig = go.Figure()
+                for pop in ['BB86 known holes', 'New + potential candidates']:
+                    s = comp.loc[comp['population'].eq(pop), col].dropna()
+                    fig.add_trace(go.Histogram(
+                        x=s,
+                        name=f'{pop} (N={len(s)})',
+                        histnorm='percent',
+                        opacity=0.65,
+                    ))
+                fig.update_layout(
+                    title=label,
+                    barmode='overlay',
+                    xaxis_title=label,
+                    yaxis_title='Percent of population',
+                    height=390,
+                    margin=dict(l=40, r=20, t=55, b=45),
+                    legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='left', x=0.0),
+                )
+                st.plotly_chart(fig, width='stretch', config={'responsive': True})
+
+
 def render_global_statistics() -> None:
     st.subheader('Statistiques globales')
-    st.caption('Histogrammes et figures de population pour les trous BB86, les 72 candidats retenus, les 175 candidats potentiels et la population complète de 247 candidats.')
+    st.caption('Histogrammes et figures de population pour BB86, les 72 nouvelles cavités retenues, les 175 cavités candidates et la population complète.')
 
     groups = {
         'BB86': [
             {
-                'title': 'BB86 — 2DCG refit',
-                'caption': 'Distributions des paramètres BB86 mesurés avec le refit 2DCG.',
-                'png': 'figures/final/bb86_2dcg_histograms/bb86_2dcg_joint_histograms_main.png',
-                'pdf': 'figures/final/bb86_2dcg_histograms/bb86_2dcg_joint_histograms_main.pdf',
-                'csv': 'figures/final/bb86_2dcg_histograms/bb86_2dcg_joint_histogram_summary_stats.csv',
-            },
-            {
                 'title': 'BB86 — catalogue original vs refit 2DCG',
-                'caption': 'Comparaison entre les paramètres de table et les paramètres refittés.',
+                'caption': 'Comparaison entre les paramètres du catalogue BB86 et les paramètres refittés avec 2DCG.',
                 'png': 'figures/final/bb86_2dcg_histograms/bb86_table_vs_2dcg_refit_histograms.png',
                 'pdf': 'figures/final/bb86_2dcg_histograms/bb86_table_vs_2dcg_refit_histograms.pdf',
                 'csv': 'figures/final/bb86_2dcg_histograms/bb86_2dcg_joint_histogram_input_with_derived_columns.csv',
             },
         ],
-        '72 retenus': [
+        '72 retenues': [
             {
-                'title': '72 candidats retenus — histogrammes',
-                'caption': 'Distributions principales des candidats retenus.',
+                'title': '72 nouvelles cavités — histogrammes',
+                'caption': 'Distributions principales des nouvelles cavités retenues.',
                 'png': 'figures/final/new_candidates_v9_histograms/new_hi_candidates_v9_histograms_main.png',
                 'pdf': 'figures/final/new_candidates_v9_histograms/new_hi_candidates_v9_histograms_main.pdf',
                 'csv': 'figures/final/new_candidates_v9_histograms/new_hi_candidates_2dcg_v9_histogram_summary_stats.csv',
             },
-            {
-                'title': '72 candidats retenus — classes de qualité',
-                'caption': 'Distributions séparées par classe de qualité.',
-                'png': 'figures/final/new_candidates_v9_histograms/new_hi_candidates_v9_histograms_by_quality_class.png',
-                'pdf': 'figures/final/new_candidates_v9_histograms/new_hi_candidates_v9_histograms_by_quality_class.pdf',
-                'csv': 'figures/final/new_candidates_v9_histograms/new_hi_candidates_2dcg_v9_clean_with_derived_columns.csv',
-            },
         ],
-        '175 potentiels': [
+        '175 candidates': [
             {
-                'title': '175 candidats potentiels — histogrammes',
-                'caption': 'Distributions des 175 candidats potentiels.',
+                'title': '175 cavités candidates — histogrammes',
+                'caption': 'Distributions des cavités candidates.',
                 'png': 'figures/final/potential_candidates_v9_histograms/v9_potential_175_histograms_main.png',
                 'pdf': 'figures/final/potential_candidates_v9_histograms/v9_potential_175_histograms_main.pdf',
                 'csv': 'figures/final/potential_candidates_v9_histograms/v9_potential_175_summary_stats.csv',
             },
             {
-                'title': '175 candidats potentiels — critères de classement',
-                'caption': 'Décompte des critères qui déplacent ces objets dans la classe potentielle.',
+                'title': '175 cavités candidates — critères de classement',
+                'caption': 'Décompte des critères qui placent ces objets dans la classe candidate.',
                 'png': 'figures/final/potential_candidates_v9_histograms/v9_potential_reason_counts_split.png',
                 'pdf': 'figures/final/potential_candidates_v9_histograms/v9_potential_reason_counts_split.pdf',
                 'csv': 'figures/final/potential_candidates_v9_histograms/v9_potential_reason_counts_split.csv',
             },
             {
-                'title': '175 candidats potentiels — critères dominants',
-                'caption': 'Critères dominants dans la population potentielle.',
+                'title': '175 cavités candidates — critères dominants',
+                'caption': 'Critères les plus fréquents dans la population candidate.',
                 'png': 'figures/final/potential_candidates_v9_histograms/v9_potential_reason_counts_combined_top20.png',
                 'pdf': 'figures/final/potential_candidates_v9_histograms/v9_potential_reason_counts_combined_top20.pdf',
                 'csv': 'figures/final/potential_candidates_v9_histograms/v9_potential_reason_counts_combined.csv',
@@ -897,40 +1006,40 @@ def render_global_statistics() -> None:
         ],
         '247 total': [
             {
-                'title': '247 candidats — retenus vs potentiels',
-                'caption': 'Comparaison des distributions entre les deux sous-populations.',
+                'title': '247 cavités — retenues vs candidates',
+                'caption': 'Comparaison des distributions entre les 72 retenues et les 175 candidates.',
                 'png': 'figures/final/potential_candidates_v9_histograms/v9_kept72_vs_potential175_histograms.png',
                 'pdf': 'figures/final/potential_candidates_v9_histograms/v9_kept72_vs_potential175_histograms.pdf',
                 'csv': 'figures/final/potential_candidates_v9_histograms/v9_all_247_summary_stats.csv',
             },
         ],
-        '2DCG refit population': [
+        'Population refittée 2DCG': [
             {
-                'title': '2DCG refit population — counts',
+                'title': 'Population refittée 2DCG — counts',
                 'caption': 'Comptages globaux des classes et statuts.',
                 'png': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_counts.png',
                 'csv': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv',
             },
             {
-                'title': '2DCG refit population — histogrammes',
+                'title': 'Population refittée 2DCG — histogrammes',
                 'caption': 'Histogrammes de la population complète.',
                 'png': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_histograms.png',
                 'csv': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv',
             },
             {
-                'title': '2DCG refit population — géométrie',
-                'caption': 'Plans géométriques.',
+                'title': 'Population refittée 2DCG — géométrie',
+                'caption': 'Plans de dispersion géométriques.',
                 'png': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_geometry_scatter.png',
                 'csv': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv',
             },
             {
-                'title': '2DCG refit population — core/control',
-                'caption': 'Comparaison core/control des scores et déficits.',
+                'title': 'Population refittée 2DCG — core/control',
+                'caption': 'Comparaison core/control.',
                 'png': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_core_control_scatter.png',
                 'csv': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv',
             },
             {
-                'title': '2DCG refit population — vitesses testées',
+                'title': 'Population refittée 2DCG — vitesses testées',
                 'caption': 'Scores selon les essais en vitesse.',
                 'png': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_trial_velocity_scores.png',
                 'csv': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv',
@@ -941,21 +1050,9 @@ def render_global_statistics() -> None:
     options = list(groups.keys())
 
     if hasattr(st, 'segmented_control'):
-        chosen = st.segmented_control(
-            'Population',
-            options,
-            default='BB86',
-            key='stats_population_group',
-            width='stretch',
-        )
+        chosen = st.segmented_control('Population', options, default='BB86', key='stats_population_group', width='stretch')
     else:
-        chosen = st.radio(
-            'Population',
-            options,
-            index=0,
-            horizontal=True,
-            key='stats_population_group_radio',
-        )
+        chosen = st.radio('Population', options, index=0, horizontal=True, key='stats_population_group_radio')
 
     if not chosen:
         chosen = 'BB86'
@@ -976,6 +1073,75 @@ def render_global_statistics() -> None:
                         csv_rel=card.get('csv'),
                         key_prefix=f'stats_{chosen}_{i}_{j}'.replace(' ', '_'),
                     )
+
+
+
+def render_multitracer_object_selector(hi_df: pd.DataFrame, candidates_df: pd.DataFrame):
+    st.markdown('### Object selection')
+
+    source_options = ['H I BB86', 'Koch25 new HI candidate', 'Potential new HI Candidate']
+    current_source = st.session_state.get('selected_source_type', 'H I BB86')
+    source_index = source_options.index(current_source) if current_source in source_options else 0
+
+    source_type = st.selectbox(
+        'Selected object type',
+        source_options,
+        index=source_index,
+        key='multi_selected_object_type',
+    )
+    st.session_state['selected_source_type'] = source_type
+
+    selected_hi_row = None
+    selected_candidate_row = None
+
+    if source_type == 'H I BB86':
+        seq_options = hi_df['Seq_str'].tolist()
+        current = f'{int(st.session_state.get("selected_hi_seq", int(hi_df["Seq"].iloc[0]))):03d}'
+        idx = seq_options.index(current) if current in seq_options else 0
+        seq_str = st.selectbox(
+            'Selected object',
+            seq_options,
+            index=idx,
+            key='multi_selected_bb86_seq',
+            format_func=lambda s: f'BB86 {int(s):03d}',
+        )
+        st.session_state['selected_hi_seq'] = int(seq_str)
+        selected_hi_row = hi_df.loc[hi_df['Seq'].eq(int(seq_str))].iloc[0]
+        return source_type, selected_hi_row, None, selected_hi_row
+
+    sub = candidates_df.loc[candidates_df['tracer'].eq(source_type)].copy() if not candidates_df.empty else pd.DataFrame()
+    if sub.empty:
+        st.warning(f'No row found for {source_type}.')
+        return source_type, None, None, None
+
+    def _cand_id(row):
+        for c in ['new_candidate_id', 'candidate_id']:
+            if c in row.index:
+                try:
+                    return int(float(row[c]))
+                except Exception:
+                    pass
+        return -1
+
+    label_prefix = 'New cavity' if source_type == 'Koch25 new HI candidate' else 'Candidate cavity'
+    sub['_selector_label'] = sub.apply(lambda r: f'{label_prefix} {_cand_id(r):04d}', axis=1)
+    uid_options = sub['object_uid'].astype(str).tolist()
+    label_map = dict(zip(sub['object_uid'].astype(str), sub['_selector_label'].astype(str)))
+
+    current_uid = str(st.session_state.get('selected_candidate_uid', ''))
+    idx = uid_options.index(current_uid) if current_uid in uid_options else 0
+
+    uid = st.selectbox(
+        'Selected object',
+        uid_options,
+        index=idx,
+        key=f'multi_selected_candidate_uid_{source_type}',
+        format_func=lambda u: label_map.get(str(u), str(u)),
+    )
+
+    st.session_state['selected_candidate_uid'] = str(uid)
+    selected_candidate_row = sub.loc[sub['object_uid'].astype(str).eq(str(uid))].iloc[0]
+    return source_type, None, selected_candidate_row, selected_candidate_row
 
 
 def render_multitracer_panel(selected_source_type: str, selected_hi_row, selected_candidate_row) -> None:
@@ -1009,7 +1175,7 @@ def render_multitracer_panel(selected_source_type: str, selected_hi_row, selecte
     pdf_path = base / f'{stem}.pdf'
 
     st.markdown(f'### {label}')
-    st.caption('Panels show local context around the selected H I structure. Dust - HELGA is the dust/FIR-sub-mm tracer, not CO gas.')
+    st.caption('Panels show local context around the selected H I structure. Dust - HELGA is the dust/FIR-sub-mm tracer.')
 
     if png_path.exists():
         st.image(str(png_path), width='stretch')
@@ -1029,17 +1195,349 @@ def render_multitracer_panel(selected_source_type: str, selected_hi_row, selecte
     else:
         st.caption('No multi-tracer PDF found for this selected object.')
 
-    st.markdown('### Coverage notes')
-    st.write(
-        'Use this panel as a contextual diagnostic: H I slab morphology, PHAST/GALEX stellar and UV context, '
-        'SITELLE/CFHT Hα coverage when available, and Dust - HELGA emission. '
-        'If a survey is outside the field or missing, the generated panel usually marks it directly.'
+
+
+NO_2DCG_BB86 = {15, 23, 29, 52, 79, 83, 90, 128}
+
+
+def clean_video_label(raw: str) -> str:
+    raw = str(raw).strip()
+    if not raw:
+        return ''
+    name = raw.split('?')[0].rstrip('/').split('/')[-1]
+    for token in ['_dark', 'dark_', 'dark']:
+        name = name.replace(token, '')
+    name = name.replace('__', '_')
+    return name
+
+
+def format_seq_list(values, prefix='BB86 '):
+    vals = []
+    for v in values:
+        try:
+            vals.append(f'{prefix}{int(v):03d}')
+        except Exception:
+            pass
+    return ', '.join(vals)
+
+
+
+
+
+def render_coverage_overview() -> None:
+    st.markdown('### Coverage overview')
+
+    bb86_v4 = APP_DIR / 'figures' / 'final' / 'multitracer' / 'bb86_zoom_v4'
+    new_v4 = APP_DIR / 'figures' / 'final' / 'multitracer' / 'new247_zoom_v4'
+    bb86_pngs = sorted(bb86_v4.glob('BB86_*_multitracer_zoom_v4.png'))
+    new_pngs = sorted(new_v4.glob('NEW247_*_multitracer_zoom_v4.png'))
+
+    st.caption(f'Multi-tracer panels available: BB86 = {len(bb86_pngs)}, new/potential candidates = {len(new_pngs)}.')
+
+    summary_candidates = [
+        APP_DIR / 'data' / 'multitracer_coverage_master.csv',
+        APP_DIR / 'figures' / 'final' / 'multitracer' / 'bb86_zoom_v4' / 'bb86_multitracer_zoom_v4_summary.csv',
+        APP_DIR / 'figures' / 'final' / 'multitracer' / 'bb86_zoom_v2' / 'bb86_multitracer_zoom_v2_summary.csv',
+    ]
+
+    summary_path = next((x for x in summary_candidates if x.exists()), None)
+    if summary_path is None:
+        st.caption('No exported PHAST/SITELLE coverage table found yet. Per-object coverage is shown directly in each multi-tracer panel.')
+        return
+
+    try:
+        cov = pd.read_csv(summary_path)
+    except Exception:
+        st.caption('A coverage table exists, but it could not be read. Per-object coverage is shown directly in each multi-tracer panel.')
+        return
+
+    seq_col = next((c for c in cov.columns if c.lower() in {'seq', 'bb86_seq', 'hi_seq'}), None)
+    sitelle_col = next((c for c in cov.columns if 'sitelle' in c.lower()), None)
+    phast_col = next((c for c in cov.columns if 'phast' in c.lower() or 'phat' in c.lower()), None)
+
+    if seq_col is None or sitelle_col is None or phast_col is None:
+        st.caption('Joint PHAST/SITELLE coverage table not exported yet. Per-object coverage is shown directly in each multi-tracer panel.')
+        return
+
+    def is_ok(s):
+        if pd.api.types.is_numeric_dtype(s):
+            return pd.to_numeric(s, errors='coerce').fillna(0).gt(0)
+        return s.fillna('').astype(str).str.lower().isin({'true', '1', 'yes', 'ok', 'covered'})
+
+    seq = pd.to_numeric(cov[seq_col], errors='coerce')
+    sit = is_ok(cov[sitelle_col])
+    pha = is_ok(cov[phast_col])
+
+    both = seq.loc[sit & pha].dropna().astype(int).tolist()
+    one = seq.loc[sit ^ pha].dropna().astype(int).tolist()
+
+    both_txt = ', '.join(f'{x:03d}' for x in both) if both else 'none listed'
+    one_txt = ', '.join(f'{x:03d}' for x in one) if one else 'none listed'
+
+    st.write(f'BB86 holes covered by SITELLE and PHAST/PHAT: {both_txt}')
+    st.write(f'BB86 holes covered by only one of SITELLE or PHAST/PHAT: {one_txt}')
+
+
+def render_sitelle_footprint_panel() -> None:
+    foot_dir = APP_DIR / 'figures' / 'final' / 'multitracer' / 'sitelle_footprints'
+    options = [
+        ('SITELLE SN3 — BB86 + new candidates', foot_dir / 'sitelle_sn3_footprints_bb86_vs_new247_v1.png'),
+        ('SITELLE SN3 — BB86', foot_dir / 'sitelle_sn3_footprints_bb86_v1.png'),
+        ('SITELLE SN3 — new candidates', foot_dir / 'sitelle_sn3_footprints_new247_v1.png'),
+    ]
+    available = [(label, path) for label, path in options if path.exists()]
+    if not available:
+        st.caption('No SITELLE footprint PNG found in figures/final/multitracer/sitelle_footprints/.')
+        return
+
+    st.markdown('### SITELLE SN3 coverage on M31')
+    labels = [x[0] for x in available]
+    chosen = st.selectbox('SITELLE footprint map', labels, index=0, key='sitelle_footprint_choice')
+    path = dict(available)[chosen]
+    st.image(str(path), width='stretch')
+
+    pdf_path = path.with_suffix('.pdf')
+    if pdf_path.exists():
+        with pdf_path.open('rb') as fh:
+            st.download_button(
+                'Download SITELLE coverage PDF',
+                data=fh.read(),
+                file_name=pdf_path.name,
+                mime='application/pdf',
+                key=f'download_{pdf_path.name}',
+            )
+
+def build_bb86_metadata_table(row: pd.Series) -> pd.DataFrame:
+    specs = [
+        ('Tracer', 'tracer'),
+        ('Catalogue', 'source_catalog'),
+        ('central velocity HRV [km/s]', 'HRV'),
+        ('major diameter [pc]', 'Maj'),
+        ('minor diameter [pc]', 'Min'),
+        ('PA [deg]', 'PA'),
+        ('offset East/West from M31 centre [arcmin]', 'x_arcmin'),
+        ('offset North/South from M31 centre [arcmin]', 'y_arcmin'),
+        ('video file', 'video_name'),
+    ]
+    rows = []
+    for label, col in specs:
+        if col not in row.index:
+            continue
+        val = value_to_text(row[col])
+        if col == 'video_name':
+            val = clean_video_label(val)
+        if val:
+            rows.append({'parameter': label, 'value': val})
+    geom = selected_hi_geometry(row)
+    rows.append({'parameter': 'context radius R [arcmin]', 'value': f'{geom["r_eq"]:.3g}'})
+    rows.append({'parameter': 'context radius R [pc]', 'value': f'{geom["r_eq"] * PC_PER_ARCMIN:.3g}'})
+    return pd.DataFrame(rows)
+
+
+def selected_object_image_path(row: pd.Series, source_type: str) -> Path | None:
+    if source_type == 'H I BB86':
+        for col in ['summary_2dcg_png', 'contrast_joint_refit_png']:
+            path = resolve_optional_path(row, col)
+            if path is not None and path.exists():
+                return path
+        return None
+    for col in ['v11_diagnostic_png', 'validation_png']:
+        path = resolve_catalog_path(row, col)
+        if path is not None and path.exists():
+            return path
+    return None
+
+
+def selected_object_title(row: pd.Series, source_type: str) -> str:
+    if source_type == 'H I BB86':
+        try:
+            return f'BB86 H I hole {int(row["Seq"]):03d}'
+        except Exception:
+            return 'BB86 H I hole'
+    return str(row.get('display_label', row.get('object_uid', source_type)))
+
+
+def render_selected_video(row: pd.Series, source_type: str) -> None:
+    st.markdown('### PPV video')
+
+    if source_type == 'H I BB86':
+        video_url = resolve_video_url(row)
+        video_path = resolve_video_path(row)
+        label = clean_video_label(video_url or (video_path.name if video_path else ''))
+        if label:
+            st.caption(f'Video: `{label}`')
+        if video_url:
+            st.success('Video served from GitHub Release asset.')
+            video_player_from_url(video_url)
+        elif video_path is not None and video_path.exists():
+            video_player_from_file(video_path)
+        else:
+            st.warning('No video associated with this selected object.')
+        return
+
+    candidate_video_url = ''
+    for video_col in ['video_url', 'video_release_url', 'video_path']:
+        if video_col in row.index:
+            raw = str(row.get(video_col, '')).strip()
+            if raw and raw.lower() not in {'nan', 'none'}:
+                candidate_video_url = raw
+                break
+
+    if not candidate_video_url:
+        cand_id = None
+        for id_col in ['new_candidate_id', 'candidate_id']:
+            if id_col in row.index:
+                try:
+                    cand_id = int(float(row.get(id_col)))
+                    break
+                except Exception:
+                    pass
+        if cand_id is not None:
+            repo = 'Croycosmos/m31-hi-holes-viewer'
+            tag = 'ppv-new-candidates-v1'
+            tracer_txt = str(row.get('tracer', source_type)).lower()
+            if 'potential' in tracer_txt:
+                fname = f'potential_candidate_{cand_id:04d}_ppv_flythrough_dark_web.mp4'
+            else:
+                fname = f'new_candidate_{cand_id:04d}_ppv_flythrough_dark_web.mp4'
+            candidate_video_url = f'https://github.com/{repo}/releases/download/{tag}/{fname}'
+
+    label = clean_video_label(candidate_video_url)
+    if label:
+        st.caption(f'Video: `{label}`')
+
+    if candidate_video_url.startswith('http://') or candidate_video_url.startswith('https://'):
+        st.success('Video served from GitHub Release asset.')
+        video_player_from_url(candidate_video_url)
+    elif candidate_video_url:
+        candidate_video_path = Path(candidate_video_url)
+        if candidate_video_path.is_absolute():
+            candidate_video_path = Path('videos') / candidate_video_path.name
+        candidate_video_path = APP_DIR / candidate_video_path
+        if candidate_video_path.exists():
+            video_player_from_file(candidate_video_path)
+        else:
+            st.error(f'Candidate video path is set but file is missing: {candidate_video_path}')
+    else:
+        st.warning('No video associated with this selected object.')
+
+
+def render_context_tables_and_zoom(row: pd.Series, objects_df: pd.DataFrame, selected_tracers: list[str], show_search_rings: bool, key_suffix: str) -> None:
+    st.markdown('### Nearby objects within 3R')
+    context_summary, near_table = nearest_context_tables(row, objects_df, max_radius_factor=3.0)
+
+    if context_summary.empty:
+        st.info('No nearby-object table could be computed for this selected object.')
+    else:
+        st.dataframe(context_summary, width='stretch', hide_index=True)
+        with st.expander('Nearby objects within 3R', expanded=False):
+            if near_table.empty:
+                st.info('No contextual object within 3R.')
+            else:
+                st.dataframe(near_table, width='stretch', hide_index=True)
+
+    local_fig = build_local_context_figure(
+        row, objects_df, BACKGROUND_PNG, meta,
+        show_search_rings=show_search_rings, selected_tracers=selected_tracers,
     )
+    if local_fig is not None:
+        st.markdown(f'### Local 3R zoom — {selected_object_title(row, str(row.get("tracer", "")))}')
+        st.plotly_chart(local_fig, key=f'local_context_map_{key_suffix}', config={'responsive': True}, width='stretch')
+
+
+def render_object_browser(hi_df: pd.DataFrame, candidates_df: pd.DataFrame) -> None:
+    st.subheader('Object browser')
+
+    category_options = ['BB86', 'New candidates', 'Potential new candidates']
+    if 'browser_category' not in st.session_state:
+        st.session_state['browser_category'] = 'BB86'
+    if 'browser_index' not in st.session_state:
+        st.session_state['browser_index'] = 0
+
+    category = st.selectbox(
+        'Object family',
+        category_options,
+        index=category_options.index(st.session_state['browser_category']) if st.session_state['browser_category'] in category_options else 0,
+        key='browser_category_select',
+    )
+    if category != st.session_state.get('browser_category'):
+        st.session_state['browser_category'] = category
+        st.session_state['browser_index'] = 0
+
+    if category == 'BB86':
+        df = hi_df.copy()
+        df['_browser_label'] = df['Seq'].map(lambda x: f'BB86 H I {int(x):03d}')
+        source_type = 'H I BB86'
+    elif category == 'New candidates':
+        df = candidates_df.loc[candidates_df['tracer'] == 'Koch25 new HI candidate'].copy()
+        df['_browser_label'] = df['display_label'].astype(str)
+        source_type = 'Koch25 new HI candidate'
+    else:
+        df = candidates_df.loc[candidates_df['tracer'] == 'Potential new HI Candidate'].copy()
+        df['_browser_label'] = df['display_label'].astype(str)
+        source_type = 'Potential new HI Candidate'
+
+    if df.empty:
+        st.warning('No object in this category.')
+        return
+
+    n = len(df)
+    st.session_state['browser_index'] = int(st.session_state.get('browser_index', 0)) % n
+
+    left_img, right_info = st.columns([1.35, 1.0])
+    row = df.iloc[st.session_state['browser_index']]
+
+    with left_img:
+        st.markdown(f'### {selected_object_title(row, source_type)}')
+        img = selected_object_image_path(row, source_type)
+        if img is not None:
+            st.image(str(img), width='stretch')
+        else:
+            st.info('No PNG found for this selected object.')
+
+    with right_info:
+        st.markdown('### 2DCG characteristics')
+        if source_type == 'H I BB86':
+            table = build_refit_table(row)
+            if table.empty:
+                table = build_bb86_metadata_table(row)
+        else:
+            table = build_candidate_table(row)
+        st.dataframe(table, width='stretch', hide_index=True)
+
+    nav_left, nav_mid, nav_right = st.columns([0.18, 0.64, 0.18])
+    with nav_left:
+        if st.button('← Previous', width='stretch'):
+            st.session_state['browser_index'] = (st.session_state['browser_index'] - 1) % n
+            st.rerun()
+    with nav_mid:
+        labels = df['_browser_label'].tolist()
+        current_label = labels[st.session_state['browser_index']]
+        chosen_label = st.selectbox(
+            'Selected object',
+            labels,
+            index=labels.index(current_label),
+            key=f'browser_object_select_{category}',
+        )
+        new_index = labels.index(chosen_label)
+        if new_index != st.session_state['browser_index']:
+            st.session_state['browser_index'] = new_index
+            st.rerun()
+    with nav_right:
+        if st.button('Next →', width='stretch'):
+            st.session_state['browser_index'] = (st.session_state['browser_index'] + 1) % n
+            st.rerun()
+
 
 
 st.title('M31 multi-tracer structures viewer')
 st.caption(
-    'H I objects are cavities/holes. Koch25 new H I candidates and potential candidates come from the blind 2DCG pipeline. UV, Hα and Dust-HELGA layers remain contextual tracers.'
+    'H I objects are cavities/holes. Koch25 new H I candidates and potential candidates come from the blind 2DCG pipeline. UV, Hα, CO, Dust-HELGA and other layers are contextual tracers.'
+)
+st.write(
+    'First step : refit the characteristics of the known holes of HI of Brinks and Bajaja of 1986 (BB86) in the new dataset of Koch of 2025. '
+    'Then, find a new way of study and detect holes (2D Cumulative Growth). '
+    'Finally, launch a blind detection in the data of Koch with 2DCG and Dassa-Terrier core seeds (2022).'
 )
 
 if not HI_CATALOG_PATH.exists():
@@ -1056,97 +1554,95 @@ valid_hi = set(hi_df['Seq'].astype(int))
 if 'selected_source_type' not in st.session_state:
     st.session_state['selected_source_type'] = 'H I BB86'
 if 'selected_hi_seq' not in st.session_state or int(st.session_state.get('selected_hi_seq', -1)) not in valid_hi:
-    first_with_video = hi_df.loc[hi_df['has_video'], 'Seq']
-    st.session_state['selected_hi_seq'] = int(first_with_video.iloc[0]) if not first_with_video.empty else int(hi_df['Seq'].iloc[0])
+    st.session_state['selected_hi_seq'] = int(hi_df['Seq'].iloc[0])
 if 'selected_candidate_uid' not in st.session_state:
     st.session_state['selected_candidate_uid'] = ''
 if 'clicked_object_uid' not in st.session_state:
     st.session_state['clicked_object_uid'] = ''
 
-tab_detection, tab_multi, tab_stats = st.tabs([
+tab_detection, tab_multi, tab_stats, tab_browser = st.tabs([
     'Détection / validation H I',
     'Multi-traceurs',
     'Statistiques globales',
-], on_change='rerun')
+    'Object browser',
+])
+
+selected_hi_row = None
+selected_candidate_row = None
+selected_object_row = None
+selected_source_type = st.session_state.get('selected_source_type', 'H I BB86')
 
 with tab_detection:
-    left, right = st.columns([1.45, 1.0])
+    st.subheader('Object selection')
 
-    with right:
-        st.subheader('Object selection')
-        n_hi = len(hi_df)
-        n_video = int(hi_df['has_video'].sum())
-        n_clean = int((candidates_df['tracer'] == 'Koch25 new HI candidate').sum()) if not candidates_df.empty else 0
-        n_rej = int((candidates_df['tracer'] == 'Potential new HI Candidate').sum()) if not candidates_df.empty else 0
-        st.write(f'BB86 H I videos found: `{n_video}/{n_hi}`')
-        st.write(f'Koch25 new H I candidates: `{n_clean}`')
-        st.write(f'Potential new H I candidates: `{n_rej}`')
-
+    c0, c1, c2, c3 = st.columns([1.1, 1.0, 1.0, 1.0])
+    with c0:
         source_options = ['H I BB86', 'Koch25 new HI candidate', 'Potential new HI Candidate']
         current_source = st.session_state.get('selected_source_type', 'H I BB86')
         source_index = source_options.index(current_source) if current_source in source_options else 0
         selected_source_type = st.selectbox('Selected object type', source_options, index=source_index)
         st.session_state['selected_source_type'] = selected_source_type
 
-        selected_hi_row = None
-        selected_candidate_row = None
-        selected_object_row = None
-        if selected_source_type == 'H I BB86':
-            show_only_with_video = st.checkbox('Show only BB86 H I holes with video in selector', value=True)
-            hi_select = hi_df.loc[hi_df['has_video']].copy() if show_only_with_video else hi_df.copy()
-            seq_options = hi_select['Seq_str'].tolist()
-            selected_seq_str = f'{int(st.session_state["selected_hi_seq"]):03d}'
-            index = seq_options.index(selected_seq_str) if selected_seq_str in seq_options else 0
-            selected = st.selectbox('BB86 H I hole', seq_options, index=index)
-            st.session_state['selected_hi_seq'] = int(selected)
-            selected_hi_seq = int(st.session_state['selected_hi_seq'])
-            selected_hi_row = hi_df.loc[hi_df['Seq'] == selected_hi_seq].iloc[0]
-            selected_object_row = selected_hi_row
+    with c1:
+        st.metric('BB86 H I holes', len(hi_df))
+    with c2:
+        n_clean = int((candidates_df['tracer'] == 'Koch25 new HI candidate').sum()) if not candidates_df.empty else 0
+        st.metric('New H I cavities', n_clean)
+    with c3:
+        n_potential = int((candidates_df['tracer'] == 'Potential new HI Candidate').sum()) if not candidates_df.empty else 0
+        st.metric('Potential H I cavities', n_potential)
+
+    if selected_source_type == 'H I BB86':
+        seq_options = hi_df['Seq_str'].tolist()
+        selected_seq_str = f'{int(st.session_state["selected_hi_seq"]):03d}'
+        index = seq_options.index(selected_seq_str) if selected_seq_str in seq_options else 0
+        selected = st.selectbox('BB86 H I hole', seq_options, index=index)
+        st.session_state['selected_hi_seq'] = int(selected)
+        selected_hi_seq = int(st.session_state['selected_hi_seq'])
+        selected_hi_row = hi_df.loc[hi_df['Seq'] == selected_hi_seq].iloc[0]
+        selected_object_row = selected_hi_row
+    else:
+        sub = candidates_df.loc[candidates_df['tracer'] == selected_source_type].copy() if not candidates_df.empty else pd.DataFrame()
+        if sub.empty:
+            st.warning(f'No rows for {selected_source_type}.')
         else:
-            sub = candidates_df.loc[candidates_df['tracer'] == selected_source_type].copy() if not candidates_df.empty else pd.DataFrame()
-            if sub.empty:
-                st.warning(f'No rows for {selected_source_type}. Run the V4 export script first.')
-            else:
-                labels = sub['display_label'].fillna(sub['object_uid']).astype(str).tolist()
-                uids = sub['object_uid'].astype(str).tolist()
-                current_uid = str(st.session_state.get('selected_candidate_uid', ''))
-                index = uids.index(current_uid) if current_uid in uids else 0
-                label = st.selectbox(selected_source_type, labels, index=index)
-                selected_candidate_row = sub.loc[sub['display_label'].astype(str) == str(label)].iloc[0]
-                st.session_state['selected_candidate_uid'] = str(selected_candidate_row['object_uid'])
-                selected_object_row = selected_candidate_row
+            uid_options = sub['object_uid'].astype(str).tolist()
+            label_map = dict(zip(sub['object_uid'].astype(str), sub['display_label'].astype(str)))
+            current_uid = str(st.session_state.get('selected_candidate_uid', ''))
+            index = uid_options.index(current_uid) if current_uid in uid_options else 0
+            selected_uid = st.selectbox(
+                selected_source_type,
+                uid_options,
+                index=index,
+                format_func=lambda uid: label_map.get(uid, uid),
+            )
+            selected_candidate_row = sub.loc[sub['object_uid'].astype(str) == str(selected_uid)].iloc[0]
+            st.session_state['selected_candidate_uid'] = str(selected_candidate_row['object_uid'])
+            selected_object_row = selected_candidate_row
+
+    left, right = st.columns([1.45, 1.0])
 
     with left:
-        st.subheader('M31 map')
-        ctrl1, ctrl2 = st.columns([1.0, 1.0])
-        with ctrl1:
-            available_tracers = [t for t in TRACER_OPTIONS if t in set(objects_df['tracer'].astype(str))]
-            default_tracers = [t for t in ['HI', 'UV', 'Hα', 'Dust - HELGA'] if t in available_tracers]
-            selected_tracers = st.multiselect(
-                'Traceurs affichés', TRACER_OPTIONS, default=default_tracers,
-                help='H I = cavités. UV/Hα/Dust-HELGA = contexte physique, pas cavités.'
-            )
-            show_search_rings = st.checkbox('Afficher les anneaux 1R/2R/3R de l’objet H I sélectionné', value=True)
-        with ctrl2:
-            possible_sources = sorted(objects_df.loc[objects_df['tracer'].isin(selected_tracers), 'source_catalog'].dropna().astype(str).unique())
-            selected_sources = st.multiselect('Catalogues affichés', possible_sources, default=possible_sources)
-
-        df_map = objects_df.loc[objects_df['tracer'].isin(selected_tracers)].copy() if selected_tracers else objects_df.iloc[0:0].copy()
-        if selected_sources:
-            df_map = df_map.loc[df_map['source_catalog'].isin(selected_sources)].copy()
-
-        missing_tracers = [t for t in selected_tracers if t not in set(objects_df['tracer'].astype(str).unique())]
-        if missing_tracers:
-            st.caption('Couches non encore peuplées : ' + ', '.join(missing_tracers))
-
+        st.subheader('M31 H I cavity map')
+        simple_tracers = ['HI', 'Koch25 new HI candidate', 'Potential new HI Candidate']
+        df_map = objects_df.loc[objects_df['tracer'].isin(simple_tracers)].copy()
         counts = df_map.groupby('tracer').size().to_dict() if not df_map.empty else {}
         counts_text = ' | '.join([f'{k}: {v}' for k, v in counts.items()]) if counts else 'aucun objet'
-        st.caption(f'Objets affichés : {len(df_map)} / {len(objects_df)} — {counts_text}')
+        st.caption(f'Objets affichés : {len(df_map)} — {counts_text}')
 
         if not BACKGROUND_PNG.exists():
             st.warning('Missing background image: data/m31_background.png')
-        fig = build_m31_figure(df_visible=df_map, df_extent=objects_df, background_png=BACKGROUND_PNG, meta=meta, selected_hi_row=selected_object_row, show_search_rings=show_search_rings)
-        event = st.plotly_chart(fig, key='m31_map_click', on_select='rerun', selection_mode='points', config={'responsive': True}, width='stretch')
+
+        fig = build_m31_figure(
+            df_visible=df_map,
+            df_extent=objects_df,
+            background_png=BACKGROUND_PNG,
+            meta=meta,
+            selected_hi_row=selected_object_row,
+            show_search_rings=False,
+        )
+        fig.update_layout(title='M31 — H I cavities and candidates')
+        event = st.plotly_chart(fig, key='m31_detection_map_click', on_select='rerun', selection_mode='points', config={'responsive': True}, width='stretch')
 
         clicked = get_clicked_object(event)
         if clicked:
@@ -1155,8 +1651,7 @@ with tab_detection:
                 try:
                     new_seq = int(float(clicked['hi_seq']))
                     st.session_state['selected_source_type'] = 'H I BB86'
-                    if new_seq != int(st.session_state['selected_hi_seq']):
-                        st.session_state['selected_hi_seq'] = new_seq
+                    st.session_state['selected_hi_seq'] = new_seq
                     st.rerun()
                 except Exception:
                     pass
@@ -1169,113 +1664,37 @@ with tab_detection:
             render_optional_png(selected_hi_row, 'contrast_joint_refit', 'contrast_joint_refit_png', 'No contrast_joint_refit PNG found for this H I hole.')
             render_optional_png(selected_hi_row, '2DCG summary', 'summary_2dcg_png', 'No 2DCG summary PNG found for this H I hole.')
         elif selected_candidate_row is not None:
-            st.markdown('### Initial 2DCG validation diagnostic')
             png_path = resolve_catalog_path(selected_candidate_row, 'validation_png')
             if png_path is not None and png_path.exists():
+                st.markdown('### 2DCG validation')
                 st.image(str(png_path), width='stretch')
-            else:
-                pass  # hidden by local patch
-            st.markdown('### 2DCG refit diagnostic')
+
+            st.markdown('### 2DCG refit')
             v11_png_path = resolve_catalog_path(selected_candidate_row, 'v11_diagnostic_png')
             if v11_png_path is not None and v11_png_path.exists():
                 st.image(str(v11_png_path), width='stretch')
             else:
-                st.caption('No 2DCG refit diagnostic PNG available for this selected candidate.')
+                st.caption('No 2DCG refit PNG available for this selected candidate.')
 
     with right:
         if selected_source_type == 'H I BB86' and selected_hi_row is not None:
             selected_hi_seq = int(selected_hi_row['Seq'])
             st.markdown(f'### Selected BB86 H I hole {selected_hi_seq:03d}')
-            geom = selected_hi_geometry(selected_hi_row)
-            meta_cols = [c for c in ['tracer', 'source_catalog', 'HRV', 'Maj', 'Min', 'PA', 'x_arcmin', 'y_arcmin', 'has_video', 'video_name'] if c in hi_df.columns]
-            meta_rows = [{'parameter': col, 'value': value_to_text(selected_hi_row[col])} for col in meta_cols]
-            meta_rows.append({'parameter': 'context radius R [arcmin]', 'value': f'{geom["r_eq"]:.3g}'})
-            meta_rows.append({'parameter': 'context radius R [pc]', 'value': f'{geom["r_eq"] * PC_PER_ARCMIN:.3g}'})
-            st.dataframe(pd.DataFrame(meta_rows), width='stretch', hide_index=True)
+            st.dataframe(build_bb86_metadata_table(selected_hi_row), width='stretch', hide_index=True)
 
-            st.markdown('### Multi-tracer context around selected H I hole')
-            context_summary, near_table = nearest_context_tables(selected_hi_row, objects_df, max_radius_factor=3.0)
-            if context_summary.empty:
-                st.info('No context table could be computed for this H I hole.')
+            no_2dcg_txt = ', '.join(f'{seq:03d}' for seq in sorted(NO_2DCG_BB86))
+            if selected_hi_seq in NO_2DCG_BB86:
+                st.warning(f'This BB86 hole is in the no-2DCG list: {no_2dcg_txt}.')
             else:
-                st.dataframe(context_summary, width='stretch', hide_index=True)
-                with st.expander('Nearby objects within 3R'):
-                    if near_table.empty:
-                        st.info('No UV/Hα/CO object within 3R.')
-                    else:
-                        st.dataframe(near_table, width='stretch', hide_index=True)
+                st.info(f'BB86 holes without 2DCG figure: {no_2dcg_txt}.')
 
-                local_fig = build_local_context_figure(
-                    selected_hi_row, objects_df, BACKGROUND_PNG, meta,
-                    show_search_rings=show_search_rings, selected_tracers=selected_tracers,
-                )
-                if local_fig is not None:
-                    st.markdown(f'### Local 3R zoom — {selected_hi_row.get("object_label", selected_hi_row.get("display_label", selected_hi_row.get("Seq_str", "selected object")))}')
-                    st.plotly_chart(
-                        local_fig, key='local_context_map_hi',
-                        config={'responsive': True}, width='stretch',
-                    )
+            refit_table = build_refit_table(selected_hi_row)
+            if not refit_table.empty:
+                st.markdown('### Refit parameters')
+                st.dataframe(refit_table, width='stretch', hide_index=True)
 
-            clicked_uid = str(st.session_state.get('clicked_object_uid', ''))
-            if clicked_uid:
-                clicked_rows = objects_df.loc[objects_df['object_uid'] == clicked_uid]
-                if not clicked_rows.empty:
-                    obj_row = clicked_rows.iloc[0]
-                    st.markdown('### Last clicked map object')
-                    st.dataframe(build_external_object_table(obj_row), width='stretch', hide_index=True)
+            render_selected_video(selected_hi_row, selected_source_type)
 
-                    st.markdown("### Clicked object PPV video")
-                    video_url_for_clicked = ""
-                    for _video_col in ["video_url", "video_release_url", "video_path"]:
-                        if _video_col in obj_row.index:
-                            _raw_video = str(obj_row.get(_video_col, "")).strip()
-                            if _raw_video and _raw_video.lower() not in {"nan", "none"}:
-                                video_url_for_clicked = _raw_video
-                                break
-                    if video_url_for_clicked.startswith("http://") or video_url_for_clicked.startswith("https://"):
-                        st.caption("Video served from GitHub Release asset.")
-                        st.video(video_url_for_clicked)
-                    elif video_url_for_clicked:
-                        _local_video = Path(video_url_for_clicked)
-                        if _local_video.is_absolute():
-                            _local_video = Path("videos") / _local_video.name
-                        _local_video = APP_DIR / _local_video
-                        if _local_video.exists():
-                            st.caption("Video served from local file.")
-                            st.video(str(_local_video))
-                        else:
-                            pass
-                    else:
-                        pass
-
-            st.markdown('### PPV video')
-            video_url = resolve_video_url(selected_hi_row)
-            video_path = resolve_video_path(selected_hi_row)
-
-            if video_url:
-                st.code(video_url, language='text')
-                st.success('Video served from GitHub Release asset.')
-                try:
-                    video_player_from_url(video_url)
-                except Exception as exc:
-                    st.error(f'Video URL playback error: {exc}')
-            elif video_path is None:
-                st.warning('No video associated with this H I hole.')
-            else:
-                try:
-                    display_path = str(video_path.relative_to(APP_DIR))
-                except Exception:
-                    display_path = str(video_path)
-                st.code(display_path, language='text')
-                if video_path.exists():
-                    size_mb = video_path.stat().st_size / 1024**2
-                    st.success(f'Local video file found. Size: {size_mb:.1f} MB')
-                    try:
-                        video_player_from_file(video_path)
-                    except Exception as exc:
-                        st.error(f'Video playback error: {exc}')
-                else:
-                    st.error(f'Catalogue points to a missing video: {video_path}')
         elif selected_candidate_row is not None:
             st.markdown(f'### Selected {selected_source_type}')
             geom = selected_hi_geometry(selected_candidate_row)
@@ -1285,109 +1704,73 @@ with tab_detection:
                 {'parameter': 'context radius R [pc]', 'value': f'{geom["r_eq"] * PC_PER_ARCMIN:.3g}'},
             ])
             st.dataframe(pd.concat([cand_meta, extra], ignore_index=True), width='stretch', hide_index=True)
-
-
-            st.markdown('### Selected candidate PPV video')
-
-            candidate_video_url = ''
-            candidate_label = str(selected_candidate_row.get('display_label', 'selected candidate'))
-
-            # A. URL directe depuis new_hi_candidates_catalog_streamlit.csv.
-            for video_col in ['video_url', 'video_release_url', 'video_path']:
-                if video_col in selected_candidate_row.index:
-                    raw = str(selected_candidate_row.get(video_col, '')).strip()
-                    if raw and raw.lower() not in {'nan', 'none'}:
-                        candidate_video_url = raw
-                        break
-
-            # B. Fallback depuis objects_df via object_uid.
-            if not candidate_video_url and 'object_uid' in selected_candidate_row.index and 'object_uid' in objects_df.columns:
-                uid = str(selected_candidate_row.get('object_uid', '')).strip()
-                sub_obj = objects_df.loc[objects_df['object_uid'].astype(str).eq(uid)].copy()
-                if not sub_obj.empty:
-                    obj_video_row = sub_obj.iloc[0]
-                    for video_col in ['video_url', 'video_release_url', 'video_path']:
-                        if video_col in obj_video_row.index:
-                            raw = str(obj_video_row.get(video_col, '')).strip()
-                            if raw and raw.lower() not in {'nan', 'none'}:
-                                candidate_video_url = raw
-                                break
-
-            # C. Fallback final : reconstruire l'URL depuis l'ID.
-            if not candidate_video_url:
-                cand_id = None
-                for id_col in ['new_candidate_id', 'candidate_id']:
-                    if id_col in selected_candidate_row.index:
-                        try:
-                            cand_id = int(float(selected_candidate_row.get(id_col)))
-                            break
-                        except Exception:
-                            pass
-
-                if cand_id is not None:
-                    repo = 'Croycosmos/m31-hi-holes-viewer'
-                    tag = 'ppv-new-candidates-v1'
-                    tracer_txt = str(selected_candidate_row.get('tracer', selected_source_type)).lower()
-                    if 'potential' in tracer_txt:
-                        fname = f'potential_candidate_{cand_id:04d}_ppv_flythrough_dark_web.mp4'
-                    else:
-                        fname = f'new_candidate_{cand_id:04d}_ppv_flythrough_dark_web.mp4'
-                    candidate_video_url = f'https://github.com/{repo}/releases/download/{tag}/{fname}'
-
-            # D. Affichage.
-            if candidate_video_url.startswith('http://') or candidate_video_url.startswith('https://'):
-                st.code(candidate_video_url, language='text')
-                st.success('Video served from GitHub Release asset.')
-                try:
-                    video_player_from_url(candidate_video_url)
-                except Exception as exc:
-                    st.error(f'Candidate video URL playback error: {exc}')
-            elif candidate_video_url:
-                candidate_video_path = Path(candidate_video_url)
-                if candidate_video_path.is_absolute():
-                    candidate_video_path = Path('videos') / candidate_video_path.name
-                candidate_video_path = APP_DIR / candidate_video_path
-                if candidate_video_path.exists():
-                    st.success('Video served from local file.')
-                    try:
-                        video_player_from_file(candidate_video_path)
-                    except Exception as exc:
-                        st.error(f'Candidate video playback error: {exc}')
-                else:
-                    st.error(f'Candidate video path is set but file is missing: {candidate_video_path}')
-            else:
-                st.warning('No video associated with this selected candidate.')
-
-
-            st.markdown('### Multi-tracer context around selected H I candidate')
-            context_summary, near_table = nearest_context_tables(selected_candidate_row, objects_df, max_radius_factor=3.0)
-            if context_summary.empty:
-                st.info('No context table could be computed for this candidate.')
-            else:
-                st.dataframe(context_summary, width='stretch', hide_index=True)
-                with st.expander('Nearby objects within 3R'):
-                    if near_table.empty:
-                        st.info('No UV/Hα/CO object within 3R.')
-                    else:
-                        st.dataframe(near_table, width='stretch', hide_index=True)
-
-                local_fig = build_local_context_figure(
-                    selected_candidate_row, objects_df, BACKGROUND_PNG, meta,
-                    show_search_rings=show_search_rings, selected_tracers=selected_tracers,
-                )
-                if local_fig is not None:
-                    st.markdown(f'### Local 3R zoom — {selected_candidate_row.get("display_label", selected_candidate_row.get("object_uid", "selected candidate"))}')
-                    st.plotly_chart(
-                        local_fig, key='local_context_map_candidate',
-                        config={'responsive': True}, width='stretch',
-                    )
-
-            pass  # hidden by local patch
-
-        pass  # hidden by local patch
+            render_selected_video(selected_candidate_row, selected_source_type)
 
 with tab_multi:
+    selected_source_type, selected_hi_row, selected_candidate_row, selected_row_for_context = render_multitracer_object_selector(hi_df, candidates_df)
+
+    render_coverage_overview()
+    render_sitelle_footprint_panel()
+
+    st.subheader('M31 multi-tracer map')
+
+    selected_row_for_context = selected_hi_row if selected_source_type == 'H I BB86' else selected_candidate_row
+
+    ctrl1, ctrl2 = st.columns([1.0, 1.0])
+    with ctrl1:
+        available_tracers = [t for t in TRACER_OPTIONS if t in set(objects_df['tracer'].astype(str))]
+        default_tracers = [t for t in TRACER_OPTIONS if t in available_tracers]
+        selected_tracers_multi = st.multiselect(
+            'Traceurs affichés',
+            TRACER_OPTIONS,
+            default=default_tracers,
+            help='H I = cavités. Les autres traceurs servent au contexte physique.',
+        )
+        show_search_rings_multi = st.checkbox('Afficher les anneaux 1R/2R/3R de l’objet H I sélectionné', value=True)
+    with ctrl2:
+        possible_sources = sorted(objects_df.loc[objects_df['tracer'].isin(selected_tracers_multi), 'source_catalog'].dropna().astype(str).unique()) if selected_tracers_multi else []
+        selected_sources_multi = st.multiselect('Catalogues affichés', possible_sources, default=possible_sources)
+
+    df_multi = objects_df.loc[objects_df['tracer'].isin(selected_tracers_multi)].copy() if selected_tracers_multi else objects_df.iloc[0:0].copy()
+    if selected_sources_multi:
+        df_multi = df_multi.loc[df_multi['source_catalog'].isin(selected_sources_multi)].copy()
+
+    counts = df_multi.groupby('tracer').size().to_dict() if not df_multi.empty else {}
+    counts_text = ' | '.join([f'{k}: {v}' for k, v in counts.items()]) if counts else 'aucun objet'
+    st.caption(f'Objets affichés : {len(df_multi)} / {len(objects_df)} — {counts_text}')
+
+    fig_multi = build_m31_figure(
+        df_visible=df_multi,
+        df_extent=objects_df,
+        background_png=BACKGROUND_PNG,
+        meta=meta,
+        selected_hi_row=selected_row_for_context,
+        show_search_rings=show_search_rings_multi,
+    )
+    st.plotly_chart(fig_multi, key='m31_multitracer_map', config={'responsive': True}, width='stretch')
+
     render_multitracer_panel(selected_source_type, selected_hi_row, selected_candidate_row)
 
+    if selected_row_for_context is not None:
+        render_context_tables_and_zoom(
+            selected_row_for_context,
+            objects_df,
+            selected_tracers_multi,
+            show_search_rings_multi,
+            key_suffix='multi',
+        )
+
 with tab_stats:
-    render_global_statistics()
+    stats_figures_tab, stats_compare_tab = st.tabs([
+        'Figures de population',
+        'BB86 vs 247 candidats',
+    ])
+
+    with stats_figures_tab:
+        render_global_statistics()
+
+    with stats_compare_tab:
+        render_bb86_vs_new247_statistics(hi_df, candidates_df)
+
+with tab_browser:
+    render_object_browser(hi_df, candidates_df)
