@@ -85,7 +85,7 @@ DISPLAY_FLIP_X = True
 ARCSEC_PER_PC = 206265.0 / 690000.0
 PC_PER_ARCMIN = 60.0 / ARCSEC_PER_PC
 
-TRACER_OPTIONS = ['HI', 'Koch25 new HI candidate', 'Potential new HI Candidate', 'UV', 'Hα', 'Dust - HELGA', 'CO', 'IR', 'X-ray']
+TRACER_OPTIONS = ['HI', 'Koch25 new HI candidate', 'Potential new HI Candidate', 'UV', 'Hα', 'Dust - HELGA', 'CO', 'X-ray']
 TRACER_COLORS = {
     'HI': 'deepskyblue',
     'Koch25 new HI candidate': 'lime',
@@ -95,7 +95,7 @@ TRACER_COLORS = {
     'Dust - HELGA': 'gold',
     'CO': 'cyan',
     'IR': 'gold',
-    'X-ray': 'lime',
+    'X-ray': 'black',
 }
 TRACER_SYMBOLS = {
     'HI': 'circle',
@@ -106,7 +106,7 @@ TRACER_SYMBOLS = {
     'Dust - HELGA': 'diamond',
     'CO': 'diamond',
     'IR': 'diamond',
-    'X-ray': 'diamond',
+    'X-ray': 'x',
 }
 
 st.set_page_config(page_title='M31 multi-tracer structures viewer', layout='wide')
@@ -1356,8 +1356,12 @@ def resolve_spitzer_mips_panel_path(row: pd.Series) -> Path | None:
     panel_dir = APP_DIR / 'figures/final/multitracer/IR/Spitzer_MIPS/object_panels'
     tracer = str(row.get('tracer', '')).strip()
 
-    if tracer == 'HI':
+    if tracer == 'HI' or 'Seq' in row.index:
         seq = numeric(row, 'hi_seq')
+        if not np.isfinite(seq):
+            seq = numeric(row, 'Seq')
+        if not np.isfinite(seq):
+            seq = numeric(row, 'candidate_id')
         if np.isfinite(seq):
             return panel_dir / f'BB86_{int(seq):03d}_spitzer_mips_panel.png'
 
@@ -1761,17 +1765,31 @@ with tab_multi:
     ctrl1, ctrl2 = st.columns([1.0, 1.0])
     with ctrl1:
         available_tracers = [t for t in TRACER_OPTIONS if t in set(objects_df['tracer'].astype(str))]
-        default_tracers = [t for t in TRACER_OPTIONS if t in available_tracers]
+        default_tracers = []
         selected_tracers_multi = st.multiselect(
             'Traceurs affichés',
             TRACER_OPTIONS,
             default=default_tracers,
-            help='H I = cavités. Les autres traceurs servent au contexte physique.',
+            key='multi_selected_tracers_v2',
+            help='H I = cavités. Les autres traceurs servent au contexte physique. Spitzer/MIPS IR est affiché comme panneau raster séparé.',
         )
         show_search_rings_multi = st.checkbox('Afficher les anneaux 1R/2R/3R de l’objet H I sélectionné', value=True)
     with ctrl2:
         possible_sources = sorted(objects_df.loc[objects_df['tracer'].isin(selected_tracers_multi), 'source_catalog'].dropna().astype(str).unique()) if selected_tracers_multi else []
-        selected_sources_multi = st.multiselect('Catalogues affichés', possible_sources, default=possible_sources)
+
+        source_key = 'multi_selected_source_catalogs_v2'
+        signature_key = 'multi_selected_source_catalogs_signature_v2'
+        signature = (tuple(selected_tracers_multi), tuple(possible_sources))
+
+        if st.session_state.get(signature_key) != signature:
+            st.session_state[source_key] = possible_sources
+            st.session_state[signature_key] = signature
+
+        selected_sources_multi = st.multiselect(
+            'Catalogues affichés',
+            possible_sources,
+            key=source_key,
+        )
 
     df_multi = objects_df.loc[objects_df['tracer'].isin(selected_tracers_multi)].copy() if selected_tracers_multi else objects_df.iloc[0:0].copy()
     if selected_sources_multi:
