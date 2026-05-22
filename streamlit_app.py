@@ -1351,6 +1351,47 @@ def selected_object_title(row: pd.Series, source_type: str) -> str:
     return str(row.get('display_label', row.get('object_uid', source_type)))
 
 
+
+def resolve_spitzer_mips_panel_path(row: pd.Series) -> Path | None:
+    panel_dir = APP_DIR / 'figures/final/multitracer/IR/Spitzer_MIPS/object_panels'
+    tracer = str(row.get('tracer', '')).strip()
+
+    if tracer == 'HI':
+        seq = numeric(row, 'hi_seq')
+        if np.isfinite(seq):
+            return panel_dir / f'BB86_{int(seq):03d}_spitzer_mips_panel.png'
+
+    if tracer == 'Koch25 new HI candidate':
+        cid = numeric(row, 'new_candidate_id')
+        if not np.isfinite(cid):
+            cid = numeric(row, 'candidate_id')
+        if np.isfinite(cid):
+            return panel_dir / f'NEW247_v11_best_{int(cid):04d}_spitzer_mips_panel.png'
+
+    if tracer == 'Potential new HI Candidate':
+        cid = numeric(row, 'new_candidate_id')
+        if not np.isfinite(cid):
+            cid = numeric(row, 'candidate_id')
+        if np.isfinite(cid):
+            return panel_dir / f'POTENTIAL_NEW247_{int(cid):04d}_spitzer_mips_panel.png'
+
+    uid = str(row.get('object_uid', '')).strip()
+    if uid:
+        candidates = sorted(panel_dir.glob(f'{uid}*_spitzer_mips_panel.png'))
+        if candidates:
+            return candidates[0]
+
+    return None
+
+
+def render_spitzer_mips_panel(row: pd.Series) -> None:
+    path = resolve_spitzer_mips_panel_path(row)
+    st.markdown('### Spitzer/MIPS IR')
+    if path is not None and path.exists():
+        st.image(str(path), width='stretch')
+    else:
+        st.info('No Spitzer/MIPS panel found for this selected object.')
+
 def render_selected_video(row: pd.Series, source_type: str) -> None:
     st.markdown('### PPV video')
 
@@ -1760,6 +1801,7 @@ with tab_multi:
             show_search_rings_multi,
             key_suffix='multi',
         )
+        render_spitzer_mips_panel(selected_row_for_context)
 
 with tab_stats:
     stats_figures_tab, stats_compare_tab = st.tabs([
