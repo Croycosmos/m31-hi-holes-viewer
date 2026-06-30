@@ -38,46 +38,46 @@ CANDIDATE_SUMMARY_PDFS = [
     {
         'title': '72 candidats retenus — distributions des paramètres',
         'caption': 'Histogrammes globaux pour les 72 candidats H I retenus.',
-        'filename': 'new_hi_candidates_CAP30_histograms_main.pdf',
+        'filename': 'new_hi_candidates_v9_histograms_main.pdf',
     },
     {
         'title': '175 candidats potentiels — distributions des paramètres',
-        'caption': 'Histogrammes globaux pour les 175 candidats potentiels du filtre CAP30.',
-        'filename': 'CAP30_potential_175_histograms_main.pdf',
+        'caption': 'Histogrammes globaux pour les 175 candidats potentiels du filtre v9.',
+        'filename': 'v9_potential_175_histograms_main.pdf',
     },
     {
         'title': 'Potentiels 175 candidats - critères du statut potentiel',
-        'caption': 'Décompte des critères ayant conduit au statut potentiel dans le filtre CAP30.',
-        'filename': 'CAP30_potential_reason_counts_split.pdf',
+        'caption': 'Décompte des critères ayant conduit au statut potentiel dans le filtre v9.',
+        'filename': 'v9_potential_reason_counts_split.pdf',
     },
 ]
 
-V11_POPULATION_DIR = APP_DIR / 'figures' / 'intermediate' / 'RefineV9Candidates2DCG_CAP30_merged_population'
+V11_POPULATION_DIR = APP_DIR / 'figures' / 'intermediate' / 'RefineV9Candidates2DCG_v11_merged_population'
 V11_POPULATION_DIAGNOSTIC_IMAGES = [
     {
         'title': '2DCG refit population - counts',
-        'caption': 'Comptages globaux des classes et statuts CAP30 pour les 247 candidats.',
-        'filename': 'CAP30_population_merged247_counts.png',
+        'caption': 'Comptages globaux des classes et statuts v11 pour les 247 candidats.',
+        'filename': 'v11_population_merged247_counts.png',
     },
     {
         'title': '2DCG refit population - histograms',
-        'caption': 'Histogrammes globaux de la population CAP30 des 247 candidats.',
-        'filename': 'CAP30_population_merged247_histograms.png',
+        'caption': 'Histogrammes globaux de la population v11 des 247 candidats.',
+        'filename': 'v11_population_merged247_histograms.png',
     },
     {
         'title': '2DCG refit population - geometry scatter',
-        'caption': 'Plans de dispersion géométriques pour les paramètres CAP30.',
-        'filename': 'CAP30_population_merged247_geometry_scatter.png',
+        'caption': 'Plans de dispersion géométriques pour les paramètres v11.',
+        'filename': 'v11_population_merged247_geometry_scatter.png',
     },
     {
         'title': '2DCG refit population - core/control scatter',
-        'caption': 'Comparaison core/control pour les scores et déficits CAP30.',
-        'filename': 'CAP30_population_merged247_core_control_scatter.png',
+        'caption': 'Comparaison core/control pour les scores et déficits v11.',
+        'filename': 'v11_population_merged247_core_control_scatter.png',
     },
     {
         'title': '2DCG refit population - trial velocity scores',
         'caption': 'Scores selon les essais en vitesse.',
-        'filename': 'CAP30_population_merged247_trial_velocity_scores.png',
+        'filename': 'v11_population_merged247_trial_velocity_scores.png',
     },
 ]
 DISPLAY_FLIP_X = True
@@ -109,7 +109,7 @@ TRACER_SYMBOLS = {
     'X-ray': 'x',
 }
 
-st.set_page_config(page_title='M31 multi-tracer structures viewer', layout='wide')
+st.set_page_config(page_title='M31 CAP30 H I cavity viewer', layout='wide')
 
 
 def as_bool(value) -> bool:
@@ -277,7 +277,7 @@ def render_pdf_inline(path: Path, height: int = 700) -> None:
 
 
 
-def render_CAP30_population_diagnostics() -> None:
+def render_v11_population_diagnostics() -> None:
     st.markdown('### 2DCG refit population diagnostics')
     st.caption('Global diagnostic figures for the 247-candidate population.')
     for i, item in enumerate(V11_POPULATION_DIAGNOSTIC_IMAGES):
@@ -294,7 +294,7 @@ def render_CAP30_population_diagnostics() -> None:
                         data=fh.read(),
                         file_name=path.name,
                         mime='image/png',
-                        key=f'CAP30_population_{i}_{path.name}',
+                        key=f'v11_population_{i}_{path.name}',
                     )
             else:
                 st.warning(f'Missing file: `{path.relative_to(APP_DIR)}`')
@@ -302,7 +302,7 @@ def render_CAP30_population_diagnostics() -> None:
 
 def render_candidate_summary_pdfs() -> None:
     st.markdown('### Candidate summary documents')
-    st.caption('Global diagnostic PDF panels for the CAP30 new-candidate catalogues.')
+    st.caption('Global diagnostic PDF panels for the v9 new-candidate catalogues.')
     for i, item in enumerate(CANDIDATE_SUMMARY_PDFS):
         path = CANDIDATE_SUMMARY_DIR / item['filename']
         with st.expander(item['title'], expanded=(i == 0)):
@@ -814,11 +814,11 @@ def load_new_candidates_catalog(path: Path) -> pd.DataFrame:
     df = pd.read_csv(path)
     if df.empty:
         return df
-    for col in ['object_uid', 'tracer', 'source_catalog', 'display_label', 'validation_png', 'video_url', 'video_release_url', 'video_path', 'video_name', 'video_release_tag', 'CAP30_diagnostic_png', 'CAP30_plot_class', 'CAP30_passes_2dcg']:
+    for col in ['object_uid', 'tracer', 'source_catalog', 'display_label', 'validation_png', 'video_url', 'video_release_url', 'video_path', 'video_name', 'video_release_tag', 'v11_diagnostic_png', 'v11_plot_class', 'v11_passes_2dcg']:
         if col not in df.columns:
             df[col] = ''
         df[col] = df[col].fillna('').astype(str)
-    for col in ['candidate_id', 'new_candidate_id', 'ra_deg', 'dec_deg', 'x_arcmin', 'y_arcmin', 'major_arcsec', 'minor_arcsec', 'pa_deg', 'v_center_kms', 'Maj_pc', 'Min_pc', 'PA_astro_deg', 'CAP30_final_score', 'CAP30_source_candidate_id', 'CAP30_match_sep_arcsec', 'CAP30_joint_2dcg_score', 'CAP30_final_Maj_pc', 'CAP30_final_Min_pc', 'CAP30_final_PA_astro_deg', 'CAP30_final_v_center_kms']:
+    for col in ['candidate_id', 'new_candidate_id', 'ra_deg', 'dec_deg', 'x_arcmin', 'y_arcmin', 'major_arcsec', 'minor_arcsec', 'pa_deg', 'v_center_kms', 'Maj_pc', 'Min_pc', 'PA_astro_deg', 'v9_final_score', 'v11_source_candidate_id', 'v11_match_sep_arcsec', 'v11_joint_2dcg_score', 'v11_final_Maj_pc', 'v11_final_Min_pc', 'v11_final_PA_astro_deg', 'v11_final_v_center_kms']:
         if col not in df.columns:
             df[col] = np.nan
         df[col] = pd.to_numeric(df[col], errors='coerce')
@@ -846,14 +846,14 @@ def build_candidate_table(row: pd.Series) -> pd.DataFrame:
         ('v centre [km/s]', 'v_center_kms'),
         ('Maj [pc]', 'Maj_pc'), ('Min [pc]', 'Min_pc'), ('PA [deg]', 'PA_astro_deg'),
         ('major [arcsec]', 'major_arcsec'), ('minor [arcsec]', 'minor_arcsec'),
-        ('2DCG source ID', 'CAP30_source_candidate_id'),
-        ('2DCG match separation [arcsec]', 'CAP30_match_sep_arcsec'),
-        ('2DCG refit Maj [pc]', 'CAP30_final_Maj_pc'),
-        ('2DCG refit Min [pc]', 'CAP30_final_Min_pc'),
-        ('2DCG refit PA [deg]', 'CAP30_final_PA_astro_deg'),
-        ('2DCG refit v centre [km/s]', 'CAP30_final_v_center_kms'),
-        ('2DCG class', 'CAP30_plot_class'),
-        ('passes 2DCG', 'CAP30_passes_2dcg'),
+        ('2DCG source ID', 'v11_source_candidate_id'),
+        ('2DCG match separation [arcsec]', 'v11_match_sep_arcsec'),
+        ('2DCG refit Maj [pc]', 'v11_final_Maj_pc'),
+        ('2DCG refit Min [pc]', 'v11_final_Min_pc'),
+        ('2DCG refit PA [deg]', 'v11_final_PA_astro_deg'),
+        ('2DCG refit v centre [km/s]', 'v11_final_v_center_kms'),
+        ('2DCG class', 'v11_plot_class'),
+        ('passes 2DCG', 'v11_passes_2dcg'),
     ]
     rows = []
     for label, col in cols:
@@ -969,73 +969,73 @@ def render_global_statistics() -> None:
             {
                 'title': '72 nouvelles cavités — histogrammes',
                 'caption': 'Distributions principales des nouvelles cavités retenues.',
-                'png': 'figures/final/new_candidates_CAP30_histograms/new_hi_candidates_CAP30_histograms_main.png',
-                'pdf': 'figures/final/new_candidates_CAP30_histograms/new_hi_candidates_CAP30_histograms_main.pdf',
-                'csv': 'figures/final/new_candidates_CAP30_histograms/new_hi_candidates_2dcg_CAP30_histogram_summary_stats.csv',
+                'png': 'figures/final/new_candidates_v9_histograms/new_hi_candidates_v9_histograms_main.png',
+                'pdf': 'figures/final/new_candidates_v9_histograms/new_hi_candidates_v9_histograms_main.pdf',
+                'csv': 'figures/final/new_candidates_v9_histograms/new_hi_candidates_2dcg_v9_histogram_summary_stats.csv',
             },
         ],
         '175 candidates': [
             {
                 'title': '175 cavités candidates — histogrammes',
                 'caption': 'Distributions des cavités candidates.',
-                'png': 'figures/final/potential_candidates_CAP30_histograms/CAP30_potential_175_histograms_main.png',
-                'pdf': 'figures/final/potential_candidates_CAP30_histograms/CAP30_potential_175_histograms_main.pdf',
-                'csv': 'figures/final/potential_candidates_CAP30_histograms/CAP30_potential_175_summary_stats.csv',
+                'png': 'figures/final/potential_candidates_v9_histograms/v9_potential_175_histograms_main.png',
+                'pdf': 'figures/final/potential_candidates_v9_histograms/v9_potential_175_histograms_main.pdf',
+                'csv': 'figures/final/potential_candidates_v9_histograms/v9_potential_175_summary_stats.csv',
             },
             {
                 'title': '175 cavités candidates — critères de classement',
                 'caption': 'Décompte des critères qui placent ces objets dans la classe candidate.',
-                'png': 'figures/final/potential_candidates_CAP30_histograms/CAP30_potential_reason_counts_split.png',
-                'pdf': 'figures/final/potential_candidates_CAP30_histograms/CAP30_potential_reason_counts_split.pdf',
-                'csv': 'figures/final/potential_candidates_CAP30_histograms/CAP30_potential_reason_counts_split.csv',
+                'png': 'figures/final/potential_candidates_v9_histograms/v9_potential_reason_counts_split.png',
+                'pdf': 'figures/final/potential_candidates_v9_histograms/v9_potential_reason_counts_split.pdf',
+                'csv': 'figures/final/potential_candidates_v9_histograms/v9_potential_reason_counts_split.csv',
             },
             {
                 'title': '175 cavités candidates — critères dominants',
                 'caption': 'Critères les plus fréquents dans la population candidate.',
-                'png': 'figures/final/potential_candidates_CAP30_histograms/CAP30_potential_reason_counts_combined_top20.png',
-                'pdf': 'figures/final/potential_candidates_CAP30_histograms/CAP30_potential_reason_counts_combined_top20.pdf',
-                'csv': 'figures/final/potential_candidates_CAP30_histograms/CAP30_potential_reason_counts_combined.csv',
+                'png': 'figures/final/potential_candidates_v9_histograms/v9_potential_reason_counts_combined_top20.png',
+                'pdf': 'figures/final/potential_candidates_v9_histograms/v9_potential_reason_counts_combined_top20.pdf',
+                'csv': 'figures/final/potential_candidates_v9_histograms/v9_potential_reason_counts_combined.csv',
             },
         ],
         '247 total': [
             {
-                'title': '616 cavités CAP30 — retenues vs candidates',
+                'title': '247 cavités — retenues vs candidates',
                 'caption': 'Comparaison des distributions entre les 72 retenues et les 175 candidates.',
-                'png': 'figures/final/potential_candidates_CAP30_histograms/CAP30_kept72_vs_potential175_histograms.png',
-                'pdf': 'figures/final/potential_candidates_CAP30_histograms/CAP30_kept72_vs_potential175_histograms.pdf',
-                'csv': 'figures/final/potential_candidates_CAP30_histograms/CAP30_all_247_summary_stats.csv',
+                'png': 'figures/final/potential_candidates_v9_histograms/v9_kept72_vs_potential175_histograms.png',
+                'pdf': 'figures/final/potential_candidates_v9_histograms/v9_kept72_vs_potential175_histograms.pdf',
+                'csv': 'figures/final/potential_candidates_v9_histograms/v9_all_247_summary_stats.csv',
             },
         ],
         'Population refittée 2DCG': [
             {
                 'title': 'Population refittée 2DCG — counts',
                 'caption': 'Comptages globaux des classes et statuts.',
-                'png': 'figures/intermediate/RefineV9Candidates2DCG_CAP30_merged_population/CAP30_population_merged247_counts.png',
-                'csv': 'figures/intermediate/RefineV9Candidates2DCG_CAP30_merged_population/CAP30_population_merged247_derived.csv',
+                'png': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_counts.png',
+                'csv': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv',
             },
             {
                 'title': 'Population refittée 2DCG — histogrammes',
                 'caption': 'Histogrammes de la population complète.',
-                'png': 'figures/intermediate/RefineV9Candidates2DCG_CAP30_merged_population/CAP30_population_merged247_histograms.png',
-                'csv': 'figures/intermediate/RefineV9Candidates2DCG_CAP30_merged_population/CAP30_population_merged247_derived.csv',
+                'png': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_histograms.png',
+                'csv': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv',
             },
             {
                 'title': 'Population refittée 2DCG — géométrie',
                 'caption': 'Plans de dispersion géométriques.',
-                'png': 'figures/intermediate/RefineV9Candidates2DCG_CAP30_merged_population/CAP30_population_merged247_geometry_scatter.png',
-                'csv': 'figures/intermediate/RefineV9Candidates2DCG_CAP30_merged_population/CAP30_population_merged247_derived.csv',
+                'png': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_geometry_scatter.png',
+                'csv': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv',
             },
             {
                 'title': 'Population refittée 2DCG — core/control',
                 'caption': 'Comparaison core/control.',
-                'png': 'figures/intermediate/RefineV9Candidates2DCG_CAP30_merged_population/CAP30_population_merged247_core_control_scatter.png',
-                'csv': 'figures/intermediate/RefineV9Candidates2DCG_CAP30_merged_population/CAP30_population_merged247_derived.csv',
+                'png': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_core_control_scatter.png',
+                'csv': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv',
             },
             {
                 'title': 'Population refittée 2DCG — vitesses testées',
                 'caption': 'Scores selon les essais en vitesse.',
-                'png': 'figures/intermediate/RefineV9Candidates2DCG_CAP30_merged_population/CAP30_population_merged247_trial_velocity_scores.png',
-                'csv': 'figures/intermediate/RefineV9Candidates2DCG_CAP30_merged_population/CAP30_population_merged247_derived.csv',
+                'png': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_trial_velocity_scores.png',
+                'csv': 'figures/intermediate/RefineV9Candidates2DCG_v11_merged_population/v11_population_merged247_derived.csv',
             },
         ],
     }
@@ -1156,14 +1156,14 @@ def render_multitracer_panel(selected_source_type: str, selected_hi_row, selecte
         base = APP_DIR / 'figures' / 'final' / 'multitracer' / 'bb86_zoom_v4'
         stem = f'BB86_{seq:03d}_multitracer_zoom_v4'
     else:
-        sid = numeric(row, 'CAP30_source_candidate_id')
+        sid = numeric(row, 'v11_source_candidate_id')
         label = str(row.get('display_label', row.get('object_uid', 'selected candidate')))
         if not np.isfinite(sid):
-            st.warning('No CAP30 source_candidate_id found for this candidate.')
+            st.warning('No v11 source_candidate_id found for this candidate.')
             return
         sid = int(sid)
         base = APP_DIR / 'figures' / 'final' / 'multitracer' / 'new247_zoom_v4'
-        stem = f'CAP30_CAP30_best_{sid:04d}_multitracer_zoom_v4'
+        stem = f'NEW247_v11_best_{sid:04d}_multitracer_zoom_v4'
 
     png_path = base / f'{stem}.png'
     pdf_path = base / f'{stem}.pdf'
@@ -1224,7 +1224,7 @@ def render_coverage_overview() -> None:
     bb86_v4 = APP_DIR / 'figures' / 'final' / 'multitracer' / 'bb86_zoom_v4'
     new_v4 = APP_DIR / 'figures' / 'final' / 'multitracer' / 'new247_zoom_v4'
     bb86_pngs = sorted(bb86_v4.glob('BB86_*_multitracer_zoom_v4.png'))
-    new_pngs = sorted(new_v4.glob('CAP30_*_multitracer_zoom_v4.png'))
+    new_pngs = sorted(new_v4.glob('NEW247_*_multitracer_zoom_v4.png'))
 
     st.caption(f'Multi-tracer panels available: BB86 = {len(bb86_pngs)}, new/potential candidates = {len(new_pngs)}.')
 
@@ -1335,7 +1335,7 @@ def selected_object_image_path(row: pd.Series, source_type: str) -> Path | None:
             if path is not None and path.exists():
                 return path
         return None
-    for col in ['CAP30_diagnostic_png', 'validation_png']:
+    for col in ['v11_diagnostic_png', 'validation_png']:
         path = resolve_catalog_path(row, col)
         if path is not None and path.exists():
             return path
@@ -1370,14 +1370,14 @@ def resolve_spitzer_mips_panel_path(row: pd.Series) -> Path | None:
         if not np.isfinite(cid):
             cid = numeric(row, 'candidate_id')
         if np.isfinite(cid):
-            return panel_dir / f'CAP30_CAP30_best_{int(cid):04d}_spitzer_mips_panel.png'
+            return panel_dir / f'NEW247_v11_best_{int(cid):04d}_spitzer_mips_panel.png'
 
     if tracer == 'Potential new HI Candidate':
         cid = numeric(row, 'new_candidate_id')
         if not np.isfinite(cid):
             cid = numeric(row, 'candidate_id')
         if np.isfinite(cid):
-            return panel_dir / f'POTENTIAL_CAP30_{int(cid):04d}_spitzer_mips_panel.png'
+            return panel_dir / f'POTENTIAL_NEW247_{int(cid):04d}_spitzer_mips_panel.png'
 
     uid = str(row.get('object_uid', '')).strip()
     if uid:
@@ -1575,7 +1575,7 @@ def render_object_browser(hi_df: pd.DataFrame, candidates_df: pd.DataFrame) -> N
 
 
 
-st.title('M31 multi-tracer structures viewer')
+st.title('M31 CAP30 H I cavities — multi-tracer viewer')
 st.caption(
     'H I objects are cavities/holes. Koch25 new H I candidates and potential candidates come from the blind 2DCG pipeline. UV, Hα, CO, Dust-HELGA and other layers are contextual tracers.'
 )
@@ -1584,19 +1584,6 @@ st.write(
     'Then, find a new way of study and detect holes (2D Cumulative Growth). '
     'Finally, launch a blind detection in the data of Koch with 2DCG and Dassa-Terrier core seeds (2022).'
 )
-
-
-with st.expander("CAP30 catalogue summary / histograms", expanded=False):
-    hist_path = SUMMARY_FIG_DIR / "cap30_summary_histograms.png"
-    sky_path = SUMMARY_FIG_DIR / "cap30_spatial_distribution.png"
-    if hist_path.exists():
-        st.image(str(hist_path), caption="CAP30 final science catalogue histograms", width="stretch")
-    else:
-        st.info("CAP30 histogram figure not found.")
-    if sky_path.exists():
-        st.image(str(sky_path), caption="CAP30 spatial distribution", width="stretch")
-    else:
-        st.info("CAP30 spatial-distribution figure not found.")
 
 if not HI_CATALOG_PATH.exists():
     st.error(f'Missing catalogue: {HI_CATALOG_PATH}')
@@ -1729,9 +1716,9 @@ with tab_detection:
                 st.image(str(png_path), width='stretch')
 
             st.markdown('### 2DCG refit')
-            CAP30_png_path = resolve_catalog_path(selected_candidate_row, 'CAP30_diagnostic_png')
-            if CAP30_png_path is not None and CAP30_png_path.exists():
-                st.image(str(CAP30_png_path), width='stretch')
+            v11_png_path = resolve_catalog_path(selected_candidate_row, 'v11_diagnostic_png')
+            if v11_png_path is not None and v11_png_path.exists():
+                st.image(str(v11_png_path), width='stretch')
             else:
                 st.caption('No 2DCG refit PNG available for this selected candidate.')
 
